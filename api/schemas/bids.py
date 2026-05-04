@@ -79,3 +79,30 @@ class GeneratedFileResponse(BaseModel):
 class GenerateBidResponse(BaseModel):
     preview: BidPreviewResponse
     generated_files: list[GeneratedFileResponse]
+
+
+class ProjectPricingResponse(BaseModel):
+    """Project listing with real pricing data."""
+
+    id: str
+    name: str
+    total_bid: float = 0.0
+    total_material: float = 0.0
+    total_labor: float = 0.0
+    trade: str = "hvac"
+    version_count: int = 0
+    area_sf: float | None = None
+    archived: bool = False
+    city: str | None = None
+    state: str | None = None
+
+
+class CreateProjectRequest(BaseModel):
+    """Request to create a new project."""
+
+    name: str
+    city: str | None = None
+    state: str | None = None
+    trade: str = "hvac"
+    total_area_sf: float | None = None
+    construction_type: str | None = None

@@ -1,0 +1,13 @@
+{
+  "name": "Integration Test",
+  "city": "Dallas",
+  "state": "TX",
+  "trade": "hvac",
+  "total_area_sf": null,
+  "construction_type": null,
+  "pricing": {
+    "contingency_pct": 5.0,
+    "overhead_profit_pct": 15.0
+  },
+  "archived": false
+}
