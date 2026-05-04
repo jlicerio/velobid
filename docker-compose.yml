@@ -1,0 +1,13 @@
+services:
+  velobid:
+    build: .
+    container_name: velobid
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./config:/app/config
+      - ./bid_projects:/app/bid_projects
+      - ./.env:/app/.env:ro
+    env_file:
+      - .env

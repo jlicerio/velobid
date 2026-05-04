@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+*.tar
+node_modules/
+.hermes/
+qa_test_suite.py
+server_test.py
+bid_projects/api_generated/
