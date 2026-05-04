@@ -1,0 +1,31 @@
+{
+  "name": "Vanguard Monet",
+  "address": "TBD",
+  "city": "Mission",
+  "state": "TX",
+  "zip_code": "TBD",
+  "total_area_sf": 81500,
+  "occupancy_group": "B/E",
+  "construction_type": "Unknown",
+  "project_admin": "jose.exiga@theairhero.com",
+  "governing_codes": {
+    "mechanical": "2021 IMC",
+    "energy": "2021 IECC"
+  },
+  "building_data": {
+    "num_stories": 1
+  },
+  "bid_date": "2026-04-23",
+  "hvac_scope": {
+    "primary_cooling": "DX RTUs with HGRH",
+    "primary_heating": "Electric Resistance",
+    "specialty_systems": "DX Split Systems for MDF/IDF/Elevator",
+    "controls": "DDC BAS with BACnet",
+    "filtration": "MERV 13"
+  },
+  "pricing": {
+    "contingency_percent": 5,
+    "overhead_profit_percent": 15,
+    "labor_rate_hourly": 75.0
+  }
+}

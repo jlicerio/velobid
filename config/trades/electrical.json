@@ -1,0 +1,169 @@
+{
+  "division": 26,
+  "name": "Electrical",
+  "full_name": "Electrical",
+  "default_region": "South Texas",
+  "labor_rates": {
+    "South Texas": {
+      "burdened_rate": 70.0,
+      "effective_date": "2026-01-01",
+      "source": "RSMeans 2026 + local market"
+    },
+    "National": {
+      "burdened_rate": 80.0,
+      "effective_date": "2026-01-01",
+      "source": "RSMeans 2026"
+    }
+  },
+  "compliance_codes": [
+    {
+      "code_name": "2017 NEC",
+      "description": "National Electrical Code",
+      "applies_to": "All electrical work, wire sizing, panel installation, grounding"
+    },
+    {
+      "code_name": "2012 TAS",
+      "description": "Texas Accessibility Standards",
+      "applies_to": "Switch and receptacle heights, panel access clearances"
+    },
+    {
+      "code_name": "2018 IBC",
+      "description": "International Building Code",
+      "applies_to": "Fire alarm system installation"
+    }
+  ],
+  "cost_codes": [
+    {
+      "code": "26-05-00",
+      "description": "Common Work Results for Electrical"
+    },
+    {
+      "code": "26-24-00",
+      "description": "Switchboards and Panelboards"
+    },
+    {
+      "code": "26-27-00",
+      "description": "Branch Circuiting"
+    },
+    {
+      "code": "26-51-00",
+      "description": "Interior Lighting"
+    },
+    {
+      "code": "26-56-00",
+      "description": "Site Lighting"
+    },
+    {
+      "code": "26-81-00",
+      "description": "Fire Alarm Systems"
+    }
+  ],
+  "equipment_categories": [
+    "Lighting Panels (208/120V)",
+    "Distribution Panels",
+    "Conduit (EMT, PVC, Rigid)",
+    "Wire and Cable (THHN, XHHW)",
+    "Light Fixtures",
+    "Occupancy Sensors",
+    "Emergency Lighting Fixtures",
+    "Exit Signs",
+    "Fire Alarm Panel",
+    "Fire Alarm Devices (Smoke/Heat)",
+    "Site Lighting (Parking Lot)",
+    "TVSS Surge Protection",
+    "Grounding System"
+  ],
+  "labor_factors": {
+    "panel_installation": {
+      "Lighting Panel (100-200A)": { "unit": "ea", "factor": 8.0, "unit_type": "hours per unit" },
+      "Distribution Panel (400A+)": { "unit": "ea", "factor": 12.0, "unit_type": "hours per unit" }
+    },
+    "circuit_installation": {
+      "20A Branch Circuit": { "unit": "circuit", "factor": 2.0, "unit_type": "hours per circuit" },
+      "30A Branch Circuit": { "unit": "circuit", "factor": 2.5, "unit_type": "hours per circuit" }
+    },
+    "fixture_installation": {
+      "Recessed Light Fixture": { "unit": "ea", "factor": 1.0, "unit_type": "hours per unit" },
+      "Surface Mount Fixture": { "unit": "ea", "factor": 1.5, "unit_type": "hours per unit" },
+      "Exit Sign": { "unit": "ea", "factor": 1.0, "unit_type": "hours per unit" },
+      "Occupancy Sensor": { "unit": "ea", "factor": 1.5, "unit_type": "hours per unit" }
+    },
+    "conduit_installation": {
+      "EMT 1/2\"": { "unit": "LF", "factor": 0.08, "unit_type": "hours per LF" },
+      "EMT 1\"": { "unit": "LF", "factor": 0.10, "unit_type": "hours per LF" },
+      "PVC 1\"": { "unit": "LF", "factor": 0.07, "unit_type": "hours per LF" },
+      "Rigid 2\"": { "unit": "LF", "factor": 0.25, "unit_type": "hours per LF" }
+    },
+    "fire_alarm": {
+      "Fire Alarm Panel": { "unit": "ea", "factor": 16.0, "unit_type": "hours per unit" },
+      "Smoke Detector": { "unit": "ea", "factor": 2.0, "unit_type": "hours per device" },
+      "Heat Detector": { "unit": "ea", "factor": 2.0, "unit_type": "hours per device" },
+      "Pull Station": { "unit": "ea", "factor": 2.5, "unit_type": "hours per device" },
+      "Horn/Strobe": { "unit": "ea", "factor": 1.5, "unit_type": "hours per device" }
+    }
+  },
+  "material_rates": {
+    "lighting_panel_100a": { "unit": "ea", "cost_per_unit": 800.0 },
+    "lighting_panel_200a": { "unit": "ea", "cost_per_unit": 1400.0 },
+    "distribution_panel_400a": { "unit": "ea", "cost_per_unit": 3200.0 },
+    "circuit_breaker_20a": { "unit": "ea", "cost_per_unit": 15.0 },
+    "circuit_breaker_30a": { "unit": "ea", "cost_per_unit": 25.0 },
+    "wire_12awg_thhn": { "unit": "LF", "cost_per_unit": 0.50 },
+    "wire_10awg_thhn": { "unit": "LF", "cost_per_unit": 0.75 },
+    "wire_6awg_thhn": { "unit": "LF", "cost_per_unit": 1.50 },
+    "emt_1_2": { "unit": "LF", "cost_per_unit": 1.20 },
+    "emt_1": { "unit": "LF", "cost_per_unit": 1.80 },
+    "recessed_light_fixture": { "unit": "ea", "cost_per_unit": 65.0 },
+    "surface_light_fixture": { "unit": "ea", "cost_per_unit": 55.0 },
+    "exit_sign": { "unit": "ea", "cost_per_unit": 85.0 },
+    "occupancy_sensor": { "unit": "ea", "cost_per_unit": 120.0 },
+    "fire_alarm_panel": { "unit": "ea", "cost_per_unit": 2500.0 },
+    "smoke_detector": { "unit": "ea", "cost_per_unit": 85.0 },
+    "heat_detector": { "unit": "ea", "cost_per_unit": 90.0 },
+    "pull_station": { "unit": "ea", "cost_per_unit": 110.0 },
+    "horn_strobe": { "unit": "ea", "cost_per_unit": 95.0 }
+  },
+  "complexity_multipliers": [
+    {
+      "name": "Concealed Ceiling",
+      "adjustment": 1.15,
+      "applies_to": "fixture_installation",
+      "rationale": "Fixtures in inaccessible ceilings require additional labor for access"
+    },
+    {
+      "name": "Fire Alarm System",
+      "adjustment": 1.10,
+      "applies_to": "fire_alarm",
+      "rationale": "NFPA 72 requirements increase testing and commissioning time"
+    }
+  ],
+  "default_exclusions": [
+    "City electrical permit fees (Owner/GC pays)",
+    "Utility service entrance and meter installation",
+    "Generators and transfer switches",
+    "IT/data infrastructure (low voltage beyond fire alarm)",
+    "Audio/visual equipment"
+  ],
+  "templates": {
+    "bid_proposal": {
+      "filename": "Electrical_Bid_Proposal.pdf",
+      "includes": ["scope_of_work", "sov_table", "compliance", "exclusions", "signature_block"],
+      "sow_items": [
+        "Supply and install all lighting panels, distribution equipment",
+        "Branch circuit conduit and wire throughout",
+        "All light fixtures, exit signs, emergency lighting",
+        "Occupancy sensors and lighting controls",
+        "Fire alarm panel, detectors, pull stations, and notification devices",
+        "Site lighting conduit and wire for parking lot"
+      ]
+    }
+  },
+  "regional_adjustments": {
+    "South Texas": {
+      "labor_multiplier": 1.0,
+      "material_multiplier": 1.0,
+      "hurricane_factor": true,
+      "outdoor_equipment_markup_pct": 5
+    }
+  }
+}

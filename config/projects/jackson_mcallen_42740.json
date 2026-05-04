@@ -1,0 +1,57 @@
+{
+  "name": "Jackson McAllen Retail #42740",
+  "address": "101 N Jackson Rd",
+  "city": "McAllen",
+  "state": "TX",
+  "zip_code": "78501",
+  "total_area_sf": 4746,
+  "occupancy_group": "M",
+  "construction_type": "Type IIB",
+  "max_height": "Not listed in bid package",
+  "design_group": "The Dimension Group",
+  "structural_engineer": "Not listed in bid package",
+  "mep_engineer": "Not listed in bid package",
+  "project_admin": "jose.exiga@theairhero.com",
+  "governing_codes": {
+    "building": "2015 IBC",
+    "mechanical": "2015 IMC",
+    "plumbing": "2015 IPC",
+    "electrical": "2014 NEC",
+    "fire": "2015 IFC",
+    "energy": "2015 IECC"
+  },
+  "site_data": {
+    "total_parking_spaces": 45,
+    "required_parking_spaces": 35,
+    "accessible_spaces": 2
+  },
+  "building_data": {
+    "num_stories": 1,
+    "mezzanine_present": false
+  },
+  "reference_sheets": {
+    "architectural": "01 42740.McAllen_Architectural_Floor_Plan",
+    "structural": "02 42740.McAllen_Structural_Details",
+    "mechanical": "03 42740.McAllen_HVAC_Layout",
+    "electrical": "04 42740.McAllen_Electrical_One_Line",
+    "plumbing": "05 42740.McAllen_Plumbing_Isometric",
+    "site": "Stripes #42740 Site Plan"
+  },
+  "bid_date": "2026-04-21",
+  "owner": "Jackson McAllen Retail Partners Ltd.",
+  "owner_contact": {
+    "name": "Jairo Romeo",
+    "email": "jromeo@lascodevelopment.com",
+    "phone": "Not listed in bid package"
+  },
+  "developer": "Lasco Development Corporation",
+  "bid_type": "labor_only_equipment",
+  "pricing": {
+    "labor_rate_per_hour": 75.0,
+    "contingency_percent": 5,
+    "overhead_profit_percent": 15
+  },
+  "labor_rate": 105,
+  "takeoff_notes": "HVAC Takeoff Calculation (2025-01): 5 AHUs @ $8,000/ea = $40,000; 2,000 lbs ductwork @ $4/lb = $8,000. Grand Total: $48,000. Based on MEP Rev3 drawings (E0.1-E1.3) - project includes 3 RTUs, 1 MAU, 12+ condenser units, 3 exhaust fans. Convenience store (7-Eleven/Stripes) - 4,746 SF wood frame, McAllen TX.",
+  "notes": "Takeoff calculation completed: 5 AHUs @ $8,000/ea = $40,000; 2,000 lbs ductwork @ $4/lb = $8,000; GRAND TOTAL: $48,000. MEP documents reviewed: 42740.McAllen.MEP.Rev3.pdf (5 pages) containing electrical/HVAC plans, panel schedules, RTU/MAU/EF schedules, and rooftop mechanical connection details."
+}

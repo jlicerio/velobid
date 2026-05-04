@@ -1,0 +1,10 @@
+{
+  "_comment": "Template for adding new bidder profiles. Copy this folder and customize the values.",
+  "company_name": "Your Company Name",
+  "primary_contact": "Contact Name",
+  "contact_email": "contact@yourcompany.com",
+  "phone": "(123) 456-7890",
+  "location": "City, State",
+  "trade_domain": "MEP / Construction Trade",
+  "operating_region": "Service Area / Region"
+}

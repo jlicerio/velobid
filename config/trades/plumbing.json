@@ -1,0 +1,146 @@
+{
+  "division": 22,
+  "name": "Plumbing",
+  "full_name": "Plumbing",
+  "default_region": "South Texas",
+  "labor_rates": {
+    "South Texas": {
+      "burdened_rate": 65.0,
+      "effective_date": "2026-01-01",
+      "source": "RSMeans 2026 + local market"
+    },
+    "National": {
+      "burdened_rate": 75.0,
+      "effective_date": "2026-01-01",
+      "source": "RSMeans 2026"
+    }
+  },
+  "compliance_codes": [
+    {
+      "code_name": "2018 IPC",
+      "description": "International Plumbing Code",
+      "applies_to": "All plumbing work, fixture installation, pipe sizing"
+    },
+    {
+      "code_name": "2018 IFGC",
+      "description": "International Fuel Gas Code",
+      "applies_to": "Gas piping, appliance connections"
+    },
+    {
+      "code_name": "2012 TAS",
+      "description": "Texas Accessibility Standards",
+      "applies_to": "Fixture mounting heights, accessibility clearances"
+    }
+  ],
+  "cost_codes": [
+    {
+      "code": "22-10-00",
+      "description": "Plumbing General"
+    },
+    {
+      "code": "22-11-00",
+      "description": "Water Supply"
+    },
+    {
+      "code": "22-12-00",
+      "description": "Sanitary Waste"
+    },
+    {
+      "code": "22-13-00",
+      "description": "Gas Piping"
+    },
+    {
+      "code": "22-30-00",
+      "description": "Plumbing Fixtures"
+    }
+  ],
+  "equipment_categories": [
+    "Water Closets",
+    "Urinals",
+    "Service Sinks",
+    "Drinking Fountains",
+    "Grease Interceptors",
+    "Water Heaters",
+    "Domestic Water Piping (Copper/PEX)",
+    "Sanitary Sewer Piping (PVC/CAST IRON)",
+    "Gas Piping (Black Iron/CSST)",
+    "Wall-Hung Carriers",
+    "Shut-Off Valves"
+  ],
+  "labor_factors": {
+    "fixture_installation": {
+      "Water Closet": { "unit": "ea", "factor": 4.0, "unit_type": "hours per unit" },
+      "Urinal": { "unit": "ea", "factor": 3.5, "unit_type": "hours per unit" },
+      "Service Sink": { "unit": "ea", "factor": 3.0, "unit_type": "hours per unit" },
+      "Drinking Fountain": { "unit": "ea", "factor": 4.0, "unit_type": "hours per unit" }
+    },
+    "pipe_installation": {
+      "Domestic Water (Copper 3/4\")": { "unit": "LF", "factor": 0.15, "unit_type": "hours per LF" },
+      "Domestic Water (Copper 1\")": { "unit": "LF", "factor": 0.18, "unit_type": "hours per LF" },
+      "Sanitary Waste (PVC 3\")": { "unit": "LF", "factor": 0.12, "unit_type": "hours per LF" },
+      "Sanitary Waste (PVC 4\")": { "unit": "LF", "factor": 0.15, "unit_type": "hours per LF" },
+      "Gas Piping (Black Iron 1\")": { "unit": "LF", "factor": 0.20, "unit_type": "hours per LF" },
+      "Gas Piping (Black Iron 2\")": { "unit": "LF", "factor": 0.30, "unit_type": "hours per LF" }
+    },
+    "equipment_setting": {
+      "Water Heater": { "unit": "ea", "factor": 6.0, "unit_type": "hours per unit" },
+      "Grease Interceptor": { "unit": "ea", "factor": 8.0, "unit_type": "hours per unit" }
+    }
+  },
+  "material_rates": {
+    "water_closet": { "unit": "ea", "cost_per_unit": 350.0 },
+    "urinal": { "unit": "ea", "cost_per_unit": 400.0 },
+    "service_sink": { "unit": "ea", "cost_per_unit": 275.0 },
+    "drinking_fountain": { "unit": "ea", "cost_per_unit": 1200.0 },
+    "water_heater_electric": { "unit": "ea", "cost_per_unit": 900.0 },
+    "water_heater_gas": { "unit": "ea", "cost_per_unit": 1400.0 },
+    "grease_interceptor": { "unit": "ea", "cost_per_unit": 1800.0 },
+    "copper_tube_3_4": { "unit": "LF", "cost_per_unit": 4.50 },
+    "copper_tube_1": { "unit": "LF", "cost_per_unit": 6.00 },
+    "pvc_pipe_3": { "unit": "LF", "cost_per_unit": 3.50 },
+    "pvc_pipe_4": { "unit": "LF", "cost_per_unit": 5.00 },
+    "black_iron_1": { "unit": "LF", "cost_per_unit": 4.00 },
+    "black_iron_2": { "unit": "LF", "cost_per_unit": 7.00 }
+  },
+  "complexity_multipliers": [
+    {
+      "name": "Multi-Story",
+      "adjustment": 1.10,
+      "applies_to": "pipe_installation",
+      "rationale": "Stack routing and increased lift labor for multi-story buildings"
+    },
+    {
+      "name": "Grease Interceptor",
+      "adjustment": 1.15,
+      "applies_to": "equipment_setting",
+      "rationale": "Heavy equipment, excavation, and precise slope requirements"
+    }
+  ],
+  "default_exclusions": [
+    "City plumbing permit fees (Owner/GC pays)",
+    "Supplying or setting Owner-furnished fixtures",
+    "Excavation and backfill for underground piping",
+    "Fire sprinkler system"
+  ],
+  "templates": {
+    "bid_proposal": {
+      "filename": "Plumbing_Bid_Proposal.pdf",
+      "includes": ["scope_of_work", "sov_table", "compliance", "exclusions", "signature_block"],
+      "sow_items": [
+        "Rough-in plumbing for all restrooms and service areas",
+        "Supply and install all fixture carriers, shut-offs, and connections",
+        "Install grease interceptor per code",
+        "Gas piping for water heater and future appliances",
+        "Testing and inspection prep"
+      ]
+    }
+  },
+  "regional_adjustments": {
+    "South Texas": {
+      "labor_multiplier": 1.0,
+      "material_multiplier": 1.0,
+      "climate_factor": "warm climate",
+      "freeze_protection_markup_pct": 0
+    }
+  }
+}

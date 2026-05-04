@@ -1,0 +1,184 @@
+{
+  "division": 23,
+  "name": "HVAC",
+  "full_name": "Heating, Ventilating, and Air Conditioning",
+  "default_region": "South Texas",
+  "labor_rates": {
+    "South Texas": {
+      "burdened_rate": 75.0,
+      "effective_date": "2026-01-01",
+      "source": "RSMeans 2026 + local market"
+    },
+    "National": {
+      "burdened_rate": 85.0,
+      "effective_date": "2026-01-01",
+      "source": "RSMeans 2026"
+    }
+  },
+  "compliance_codes": [
+    {
+      "code_name": "2021 IMC",
+      "description": "International Mechanical Code",
+      "applies_to": "Duct systems, refrigerant handling, equipment installation"
+    },
+    {
+      "code_name": "2021 IECC",
+      "description": "International Energy Conservation Code",
+      "applies_to": "Duct insulation R-values, equipment efficiency"
+    },
+    {
+      "code_name": "2021 IPC",
+      "description": "International Plumbing Code",
+      "applies_to": "Condensate drain connections"
+    },
+    {
+      "code_name": "2020 NEC",
+      "description": "National Electrical Code",
+      "applies_to": "Low-voltage control wiring"
+    },
+    {
+      "code_name": "2012 TAS",
+      "description": "Texas Accessibility Standards",
+      "applies_to": "Equipment access, controls placement"
+    }
+  ],
+  "cost_codes": [
+    {
+      "code": "23-31-00",
+      "description": "Sheet Metal Fabrication"
+    },
+    {
+      "code": "23-31-13",
+      "description": "Air Distribution & Flex Drops"
+    },
+    {
+      "code": "23-05-29",
+      "description": "Hangers, Supports & Seismic Bracing"
+    },
+    {
+      "code": "23-07-13",
+      "description": "Duct Insulation & Seam Sealing"
+    },
+    {
+      "code": "23-05-93",
+      "description": "Leak Testing & System Prep"
+    }
+  ],
+  "equipment_categories": [
+    "Air Handling Units (AHUs)",
+    "Condensing Units",
+    "Exhaust Fans",
+    "Ductwork (by gauge)",
+    "Flex Duct Drops",
+    "Grilles, Diffusers & Registers (GRDs)",
+    "Louvers",
+    "Refrigerant Piping",
+    "Condensate Drains",
+    "Low Voltage Controls",
+    "Test & Balance (TAB)"
+  ],
+  "labor_factors": {
+    "equipment_setting": {
+      "AHU (Mezzanine)": { "unit": "ea", "factor": 8, "unit_type": "hours per unit" },
+      "Condenser (Grade Pad)": { "unit": "ea", "factor": 4, "unit_type": "hours per unit" },
+      "Exhaust Fan": { "unit": "ea", "factor": 4, "unit_type": "hours per unit" }
+    },
+    "sheet_metal": {
+      "Ductwork Fabrication & Install": { "unit": "lbs", "factor": 0.04, "unit_type": "hours per lb" },
+      "Flex Duct Drops": { "unit": "drops", "factor": 0.5, "unit_type": "hours per drop" }
+    },
+    "air_distribution": {
+      "Diffusers, Registers": { "unit": "ea", "factor": 1.0, "unit_type": "hours per unit" },
+      "Louvers": { "unit": "ea", "factor": 2.0, "unit_type": "hours per unit" }
+    },
+    "piping": {
+      "Refrigerant Lines (Copper)": { "unit": "LF", "factor": 0.15, "unit_type": "hours per LF" },
+      "Condensate Drains (PVC)": { "unit": "LF", "factor": 0.10, "unit_type": "hours per LF" }
+    },
+    "controls": {
+      "Low-Voltage Wiring": { "unit": "system", "factor": 6, "unit_type": "hours per system" },
+      "Start-up & TAB": { "unit": "lot", "factor": 20, "unit_type": "hours total" }
+    }
+  },
+  "material_rates": {
+    "ductwork_fabrication": {
+      "24ga Galvanized": { "unit": "lbs", "cost_per_unit": 4.0 },
+      "22ga Galvanized": { "unit": "lbs", "cost_per_unit": 4.5 }
+    },
+    "flex_duct": { "unit": "ea", "cost_per_unit": 30.0, "spec": "R-8 insulated, 12\" dia" },
+    "galvanized_strap_hangers": { "unit": "ea", "cost_per_unit": 0.85, "spec": "1\" x 26ga" },
+    "diffusers_registers": { "unit": "ea", "cost_per_unit": 80.0 },
+    "duct_insulation": { "unit": "SF", "cost_per_unit": 1.25, "spec": "R-8, 2\" thick, foil faced" },
+    "duct_wrap_jackets": { "unit": "LF", "cost_per_unit": 2.0 }
+  },
+  "complexity_multipliers": [
+    {
+      "name": "Mezzanine Access",
+      "adjustment": 1.15,
+      "applies_to": "equipment_setting",
+      "rationale": "Rigging into tight elevated mechanical mezzanine vs flat roof crane drop"
+    },
+    {
+      "name": "South Texas Climate",
+      "adjustment": 1.10,
+      "applies_to": "duct_insulation",
+      "rationale": "High humidity requires extra insulation seal work to prevent condensation"
+    },
+    {
+      "name": "Seismic/Code",
+      "adjustment": 1.05,
+      "applies_to": "hangers_supports",
+      "rationale": "Turnbuckles and safety brackets required per IMC"
+    }
+  ],
+  "default_exclusions": [
+    "City permit application fees (Owner/GC pays)",
+    "Supplying or setting AHUs, condensing units, and exhaust fans (separate equipment bid)",
+    "Primary low-voltage control wiring and final TAB report",
+    "Structural reinforcement of mechanical mezzanine or roof decking"
+  ],
+  "templates": {
+    "bid_proposal": {
+      "filename": "Bid_Proposal.pdf",
+      "includes": ["scope_of_work", "sov_table", "compliance", "exclusions", "signature_block"],
+      "sow_items": [
+        "Fabrication and installation of galvanized ductwork (SMACNA Class A)",
+        "Routing and installation of flexible duct drops (R-8 insulated)",
+        "Supply and installation of duct hardware, plenums, end caps, and turning vanes",
+        "Premium duct insulation wrapping to prevent condensation",
+        "Hoisting, rigging, and specialized labor for mezzanine access",
+        "Seismic bracing, turnbuckles, and safety brackets"
+      ]
+    },
+    "full_scope": {
+      "filename": "Full_Scope.pdf",
+      "includes": ["project_specs", "hvac_pricing_matrix", "manpower_estimation", "cost_summary", "compliance"],
+      "sections": {
+        "mechanical_equipment": { "markup_pct": 0 },
+        "exhaust_fans": { "markup_pct": 0 },
+        "sheet_metal_duct": { "markup_pct": 0 },
+        "air_distribution": { "markup_pct": 0 },
+        "refrigerant_condensate": { "markup_pct": 0 },
+        "crane_rigging": { "markup_pct": 0 },
+        "controls_tab": { "markup_pct": 0 }
+      }
+    },
+    "bom_manpower": {
+      "filename": "BOM_Manpower.pdf",
+      "includes": ["bill_of_materials", "labor_takeoff", "productivity_factors", "cost_summary", "compliance"],
+      "bom_sections": ["sheet_metal_ductwork", "hangers_supports", "insulation"]
+    },
+    "cost_summary": {
+      "filename": "Cost_Summary.pdf",
+      "includes": ["scope_overview", "ductwork_pricing", "labor_estimation", "cost_summary", "compliance"]
+    }
+  },
+  "regional_adjustments": {
+    "South Texas": {
+      "labor_multiplier": 1.0,
+      "material_multiplier": 1.0,
+      "climate_factor": "high humidity",
+      "insulation_markup_pct": 10
+    }
+  }
+}

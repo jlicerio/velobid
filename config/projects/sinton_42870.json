@@ -1,0 +1,56 @@
+﻿{
+  "name": "Sinton Retail #42870",
+  "address": "7393 Hwy 77 Bus.",
+  "city": "Sinton",
+  "state": "TX",
+  "zip_code": "78387",
+  "total_area_sf": 5374,
+  "occupancy_group": "M",
+  "construction_type": "Type IIB",
+  "max_height": "Not listed in bid package",
+  "design_group": "Not listed in bid package",
+  "structural_engineer": "Not listed in bid package",
+  "mep_engineer": "Not listed in bid package",
+  "project_admin": "jose.exiga@theairhero.com",
+  "governing_codes": {
+    "building": "2015 IBC",
+    "mechanical": "2015 IMC",
+    "plumbing": "2015 IPC",
+    "electrical": "2014 NEC",
+    "fire": "2015 IFC",
+    "energy": "2015 IECC"
+  },
+  "site_data": {
+    "total_parking_spaces": 50,
+    "required_parking_spaces": 40,
+    "accessible_spaces": 3
+  },
+  "building_data": {
+    "num_stories": 1,
+    "mezzanine_present": false
+  },
+  "reference_sheets": {
+    "architectural": "01 42870.Sinton_Architectural_Floor_Plan",
+    "structural": "02 42870.Sinton_Structural_Details",
+    "mechanical": "03 42870.Sinton_HVAC_Layout",
+    "electrical": "04 42870.Sinton_Electrical_One_Line",
+    "plumbing": "05 42870.Sinton_Plumbing_Isometric",
+    "civil": "06 42870.Sinton_Civil_Site_Plan",
+    "landscape": "07 42870.Sinton_Landscape_Plan",
+    "site": "08 42870.Sinton_Survey"
+  },
+  "bid_date": "2026-04-21",
+  "owner": "Sinton LDC Retail Partners, Ltd.",
+  "owner_contact": {
+    "name": "Kathy Miller",
+    "email": "Not listed in bid package",
+    "phone": "Not listed in bid package"
+  },
+  "developer": "Lasco Development Corporation",
+  "bid_type": "labor_only_equipment",
+  "pricing": {
+    "labor_rate_per_hour": 75.0,
+    "contingency_percent": 5,
+    "overhead_profit_percent": 15
+  }
+}

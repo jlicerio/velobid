@@ -1,0 +1,95 @@
+{
+  "name": "Shalom Prayer Center",
+  "address": "203 E Wisconsin Rd",
+  "city": "Edinburg",
+  "state": "TX",
+  "zip_code": "78541",
+  "total_area_sf": 7466,
+  "occupancy_group": "A-3",
+  "construction_type": "Type IIB",
+  "max_height": "15'-6\"",
+  "design_group": "Imagine Design and Construction",
+  "structural_engineer": "Turbo Engineers PLLC",
+  "mep_engineer": "Trinity Engineering",
+  "project_admin": "bau-green",
+  "bid_type": "ductwork_only",
+  "governing_codes": {
+    "building": "2018 IBC",
+    "mechanical": "2018 IMC",
+    "plumbing": "2018 IPC",
+    "electrical": "2017 NEC",
+    "fire": "2018 IFC",
+    "energy": "2018 IECC",
+    "fuel_gas": "2018 IFGC",
+    "accessibility": "2012 TAS"
+  },
+  "site_data": {
+    "total_parking_spaces": 56,
+    "required_parking_spaces": 37,
+    "accessible_spaces": 4,
+    "max_egress_travel_distance_ft": 64,
+    "allowed_egress_travel_distance_ft": 200,
+    "max_common_path_travel_ft": 24,
+    "allowed_common_path_travel_ft": 75
+  },
+  "building_data": {
+    "nave_seating": 220,
+    "fellowship_hall_seating": 200,
+    "total_covered_area_sf": 15268,
+    "num_stories": 1,
+    "mezzanine_present": true
+  },
+  "reference_sheets": {
+    "architectural": "A-001, A-002, A-101 (Rev: 08/19/25)",
+    "structural": "S-001 through S-501",
+    "mechanical": "M-001, M-002, M-101 (Rev: 08/19/25)",
+    "electrical": "E-001, E-101",
+    "plumbing": "P-001, P-101"
+  },
+  "bid_date": "2026-04-17",
+  "owner": "Imagine Design and Construction",
+  "owner_contact": {
+    "name": "Guillermo Alvarez de la Cadena",
+    "address": "4900 W Expy 83 Suite 257, McAllen, TX 78501",
+    "email": "imaginergv@yahoo.com"
+  },
+  "technical_scope": {
+    "project_name": "Shalom Prayer Center",
+    "location": "203 E Wisconsin Rd, Edinburg, TX",
+    "developer_architect": "Imagine Design and Construction",
+    "submitted_by": "Jose Exiga, Air Hero LLC",
+    "submitted_name": "Jose Exiga",
+    "submitted_title": "Estimator / Designer",
+    "submitted_company": "Air Hero LLC",
+    "reference_sheets": "M-001, M-002, M-101 (Rev: 08/19/25)",
+    "execution_scope": [
+      "Fabricated Ductwork: Execution of approximately 7,500 lbs of galvanized ductwork, utilizing 24ga (6,000 lbs) and 22ga (1,500 lbs) materials to SMACNA Class A standards.",
+      "Air Distribution: Installation of 40 flexible duct drops (R-8 insulated) and associated registers, diffusers, and louvers.",
+      "Equipment Setting: Precise placement of 5 indoor AHUs within the mechanical mezzanine and 5 outdoor condensing units on the exterior concrete pad.",
+      "Ventilation: Installation of 4 exhaust fans to support high-density assembly spaces.",
+      "Support Systems: Suspension of ductwork via 1\" x 26ga galvanized strap hangers, including seismic bracing, turnbuckles, and safety brackets per IMC Chapter 3."
+    ],
+    "regulatory_standards": [
+      "Mechanical: 2018 International Mechanical Code (IMC)",
+      "Energy: 2018 International Energy Conservation Code (IECC), specifically R-8 minimum duct insulation to prevent condensation in the South Texas climate",
+      "Accessibility: 2012 Texas Accessibility Standards (TAS)",
+      "Electrical: 2017 National Electrical Code (NEC) for all low-voltage control and sensor wiring"
+    ],
+    "special_conditions": [
+      "Mezzanine Access: Contractor acknowledges tight-clearance rigging requirements for the mechanical mezzanine and will utilize specialized labor and hoisting.",
+      "Clash Detection: Routing must account for structural steel trusses in the Nave as detailed in sheets M-101 and relevant building sections.",
+      "Quality Control: All sheet metal seams shall be sealed with premium mastic/sealant to ensure system integrity in high-humidity environments."
+    ],
+    "exclusions": [
+      "City of Edinburg mechanical permit application fees (Owner/GC responsibility).",
+      "Structural modifications to the roof decking or mechanical mezzanine.",
+      "Provision of temporary power or water during construction.",
+      "Primary low-voltage control wiring and final Test & Balance (TAB) report."
+    ]
+  },
+  "pricing": {
+    "contingency_pct": 5.0,
+    "overhead_profit_pct": 15.0,
+    "default_labor_rate": 75.0
+  }
+}
