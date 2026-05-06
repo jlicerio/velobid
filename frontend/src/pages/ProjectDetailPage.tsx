@@ -264,7 +264,7 @@ export function ProjectDetailPage() {
 
           {activeTab === "bids" && (
             <div className="text-center text-muted-foreground py-12 space-y-3">
-              <p>Bid management — versions, diffs, and line items</p>
+              <p>Coming soon — bid versions and document viewer are under development.</p>
               {bidResults.length > 0 && (
                 <div className="max-w-md mx-auto text-left space-y-2">
                   <h3 className="font-medium text-sm">Generated Files</h3>
@@ -281,7 +281,7 @@ export function ProjectDetailPage() {
 
           {activeTab === "documents" && (
             <div className="text-center text-muted-foreground py-12">
-              <p>Document viewer — blueprints and PDFs</p>
+              <p>Coming soon — bid versions and document viewer are under development.</p>
               <button
                 onClick={() => navigate(`/projects/${projectId}/documents`)}
                 className="mt-4 px-4 py-2 border rounded-lg text-sm hover:bg-accent"

@@ -1,0 +1,45 @@
+{
+  "project_type": "residential",
+  "name": "Jane Doe - HVAC Estimate",
+  "customer_name": "Jane Doe",
+  "customer_address": "456 Oak Ave, McAllen TX",
+  "customer_phone": null,
+  "customer_email": null,
+  "property_sqft": null,
+  "scope_description": "Replace 5-ton split system",
+  "equipment": [
+    {
+      "item": "Condensing Unit",
+      "brand": "Trane",
+      "model": "",
+      "tons": null,
+      "btu": null,
+      "cost": 1800.0,
+      "qty": 1
+    }
+  ],
+  "labor_tasks": [
+    {
+      "item": "Remove old unit",
+      "hours": 4.0,
+      "qty": 1
+    }
+  ],
+  "pricing": {
+    "equipment_total": 1980.0,
+    "labor_total": 340.0,
+    "labor_hours": 4.0,
+    "misc_materials": 0,
+    "permit_fee": 150.0,
+    "subtotal": 2320.0,
+    "tax": 191.4,
+    "tax_rate": 0.0825,
+    "equipment_markup_pct": 10.0,
+    "labor_rate": 85.0,
+    "grand_total": 2661.4
+  },
+  "status": "estimate",
+  "archived": false,
+  "created_at": "2026-05-06T21:00:45.486230",
+  "id": "jane_doe_050626"
+}

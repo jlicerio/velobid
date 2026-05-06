@@ -72,3 +72,9 @@ def meta() -> dict[str, str]:
         "bid_projects_dir": str(BID_PROJECTS_DIR),
     }
 
+
+@app.get("/{path:path}", include_in_schema=False)
+async def spa_fallback(path: str):
+    """Serve SPA index.html for client-side routes (e.g. /login, /logout)."""
+    return FileResponse(STATIC_DIR / "index.html")
+

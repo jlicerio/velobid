@@ -1,0 +1,29 @@
+{
+  "project_type": "residential",
+  "name": "Test User - HVAC Estimate",
+  "customer_name": "Test User",
+  "customer_address": "123 Main St",
+  "customer_phone": null,
+  "customer_email": null,
+  "property_sqft": null,
+  "scope_description": "Replace HVAC system",
+  "equipment": [],
+  "labor_tasks": [],
+  "pricing": {
+    "equipment_total": 0,
+    "labor_total": 0,
+    "labor_hours": 0,
+    "misc_materials": 0,
+    "permit_fee": 150.0,
+    "subtotal": 0,
+    "tax": 0.0,
+    "tax_rate": 0.0825,
+    "equipment_markup_pct": 10.0,
+    "labor_rate": 85.0,
+    "grand_total": 150.0
+  },
+  "status": "estimate",
+  "archived": false,
+  "created_at": "2026-05-06T21:00:38.205504",
+  "id": "test_user_050626"
+}

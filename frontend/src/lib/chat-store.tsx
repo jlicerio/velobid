@@ -201,39 +201,66 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
               try {
                 const data = JSON.parse(dataStr)
-                if (data.type === "content") {
-                  fullContent += data.delta
-                  dispatch({
-                    type: "UPDATE_LAST_MESSAGE",
-                    sessionId,
-                    content: fullContent,
-                  })
-                } else if (data.type === "thought") {
-                  fullReasoning += data.delta
-                  dispatch({
-                    type: "UPDATE_LAST_MESSAGE",
-                    sessionId,
-                    content: fullContent,
-                    reasoningContent: data.delta,
-                  })
-                } else if (data.type === "tool_call") {
-                  dispatch({
-                    type: "ADD_TOOL_CALL",
-                    sessionId,
-                    call: { name: data.name },
-                  })
-                } else if (data.type === "tool_result") {
-                  dispatch({
-                    type: "ADD_TOOL_CALL",
-                    sessionId,
-                    call: { name: data.name, result: data.result },
-                  })
-                } else if (data.type === "error") {
-                  dispatch({
-                    type: "UPDATE_LAST_MESSAGE",
-                    sessionId,
-                    content: `Error: ${data.message}`,
-                  })
+
+                // Handle OpenAI-compatible format (choices array)
+                if (data.choices && Array.isArray(data.choices)) {
+                  const delta = data.choices[0]?.delta
+                  if (delta) {
+                    if (delta.content) {
+                      fullContent += delta.content
+                      dispatch({
+                        type: "UPDATE_LAST_MESSAGE",
+                        sessionId,
+                        content: fullContent,
+                      })
+                    }
+                    if (delta.reasoning_content) {
+                      fullReasoning += delta.reasoning_content
+                      dispatch({
+                        type: "UPDATE_LAST_MESSAGE",
+                        sessionId,
+                        content: fullContent,
+                        reasoningContent: delta.reasoning_content,
+                      })
+                    }
+                  }
+                }
+                // Handle custom Hermes format (type field)
+                else if (data.type) {
+                  if (data.type === "content") {
+                    fullContent += data.delta
+                    dispatch({
+                      type: "UPDATE_LAST_MESSAGE",
+                      sessionId,
+                      content: fullContent,
+                    })
+                  } else if (data.type === "thought") {
+                    fullReasoning += data.delta
+                    dispatch({
+                      type: "UPDATE_LAST_MESSAGE",
+                      sessionId,
+                      content: fullContent,
+                      reasoningContent: data.delta,
+                    })
+                  } else if (data.type === "tool_call") {
+                    dispatch({
+                      type: "ADD_TOOL_CALL",
+                      sessionId,
+                      call: { name: data.name },
+                    })
+                  } else if (data.type === "tool_result") {
+                    dispatch({
+                      type: "ADD_TOOL_CALL",
+                      sessionId,
+                      call: { name: data.name, result: data.result },
+                    })
+                  } else if (data.type === "error") {
+                    dispatch({
+                      type: "UPDATE_LAST_MESSAGE",
+                      sessionId,
+                      content: `Error: ${data.message}`,
+                    })
+                  }
                 }
               } catch {
                 // partial JSON chunk

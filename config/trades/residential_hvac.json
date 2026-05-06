@@ -1,0 +1,14 @@
+{
+  "defaults": {
+    "equipment_markup_pct": 10.0,
+    "labor_rate_per_hour": 85.0,
+    "permit_fee": 150.0,
+    "tax_rate": 0.0825
+  },
+  "line_item_categories": {
+    "equipment": { "markup_pct": 10.0, "taxable": true },
+    "labor": { "taxable": false },
+    "materials": { "markup_pct": 15.0, "taxable": true },
+    "permit": { "taxable": false }
+  }
+}

@@ -17,6 +17,20 @@ export function AppShell() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { state, dispatch, createSession } = useChat();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile and auto-toggle sidebar
+  useEffect(() => {
+    const check = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Detect project context from route
   const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
@@ -79,13 +93,28 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Chat Sidebar — persistent, resizable, context-aware */}
+      {/* Chat Sidebar — persistent on desktop, overlay on mobile */}
       <div
         ref={sidebarRef}
-        style={{ width: sidebarWidth }}
-        className="flex flex-col border-r bg-card shrink-0 relative"
+        style={{ width: isMobile ? undefined : sidebarWidth }}
+        className={cn(
+          "flex flex-col border-r bg-card",
+          isMobile
+            ? "fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[400px] transition-transform duration-200"
+            : "relative shrink-0",
+          isMobile && !sidebarOpen && "hidden"
+        )}
       >
         <div className="h-12 border-b flex items-center px-4 gap-2 shrink-0">
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="text-sm mr-1 hover:bg-accent rounded p-1"
+              aria-label="Close sidebar"
+            >
+              ←
+            </button>
+          )}
           <span className="text-base">💬</span>
           <span className="text-sm font-semibold">AI Assistant</span>
           {currentProjectId && (
@@ -99,6 +128,14 @@ export function AppShell() {
         </div>
       </div>
 
+      {/* Mobile backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Resize handle */}
       <div
         onMouseDown={handleMouseDown}
@@ -109,6 +146,14 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top navigation */}
         <header className="h-12 border-b flex items-center px-4 gap-2 shrink-0 bg-card">
+          {/* Mobile hamburger toggle */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden text-lg px-1 hover:bg-accent rounded"
+            aria-label="Toggle chat sidebar"
+          >
+            ☰
+          </button>
           <NavLink to="/" className="text-sm font-bold text-primary mr-4">
             VeloBid
           </NavLink>

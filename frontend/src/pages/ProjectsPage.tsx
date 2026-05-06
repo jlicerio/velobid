@@ -52,7 +52,7 @@ export function ProjectsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{filtered.length} {filter === "all" ? "total" : filter} projects</p>
         </div>
-        <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 shadow-sm">
+        <button disabled title="Coming soon" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium shadow-sm cursor-not-allowed opacity-60">
           + New Project
         </button>
       </div>
