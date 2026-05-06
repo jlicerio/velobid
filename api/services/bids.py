@@ -30,7 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = PROJECT_ROOT / "config"
 PROJECTS_DIR = CONFIG_DIR / "projects"
 TRADES_DIR = CONFIG_DIR / "trades"
-BID_PROJECTS_DIR = PROJECT_ROOT / "bid_projects"
+BID_PROJECTS_DIR = Path("/data/velobid/bids")
 OUTPUT_DIR = BID_PROJECTS_DIR / "api_generated"
 
 

@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from api.services.bids import BID_PROJECTS_DIR
+FILES_ROOT = Path("/data/velobid/files")
 
 router = APIRouter(prefix="/api/v1/files", tags=["files"])
 
@@ -18,7 +18,7 @@ class FileOperationRequest(BaseModel):
 @router.get("/list")
 def list_files(subpath: str = ""):
     """List files in the generated output directory."""
-    root = BID_PROJECTS_DIR / subpath
+    root = FILES_ROOT / subpath
     if not root.exists() or not root.is_dir():
         raise HTTPException(status_code=404, detail="Path not found")
 
@@ -28,7 +28,7 @@ def list_files(subpath: str = ""):
             {
                 "name": item.name,
                 "is_dir": item.is_dir(),
-                "path": str(item.relative_to(BID_PROJECTS_DIR)).replace("\\", "/"),
+                "path": str(item.relative_to(FILES_ROOT)).replace("\\", "/"),
                 "size": item.stat().st_size if item.is_file() else None,
             }
         )
@@ -38,8 +38,8 @@ def list_files(subpath: str = ""):
 @router.delete("/delete")
 def delete_file(path: str):
     """Delete a generated file."""
-    full_path = (BID_PROJECTS_DIR / path).resolve()
-    if not str(full_path).startswith(str(BID_PROJECTS_DIR)):
+    full_path = (FILES_ROOT / path).resolve()
+    if not str(full_path).startswith(str(FILES_ROOT)):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if not full_path.exists():

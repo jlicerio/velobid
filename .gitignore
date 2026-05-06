@@ -1,6 +1,7 @@
 # Environment
 .env
 .env.example
+*.env
 
 # Python
 __pycache__/
@@ -12,13 +13,19 @@ __pycache__/
 dist/
 build/
 
+# Credentials / Secrets
+hermes/auth.json
+*.auth.json
+credentials*
+secret*
+
 # Virtual env
 venv/
 .venv/
 
-# Node / Frontend
+# Node / Frontend (build artifacts only — source is tracked)
 node_modules/
-frontend/
+frontend/dist/
 .next/
 
 # IDE
@@ -39,3 +46,8 @@ bid_projects/*/versions/
 # Temp / Locked files
 *.locked
 server_log.txt
+
+# Generated frontend build output (Vite → api/static)
+api/static/assets/
+api/static/index.html
+qa-reports/

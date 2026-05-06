@@ -47,7 +47,7 @@
     "phone": "Not listed in bid package"
   },
   "developer": "Lasco Development Corporation",
-  "bid_type": "labor_only_equipment",
+  "bid_type": "ductwork_only",
   "pricing": {
     "labor_rate_per_hour": 75.0,
     "contingency_percent": 5,

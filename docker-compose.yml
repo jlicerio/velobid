@@ -4,10 +4,66 @@ services:
     container_name: velobid
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8000:8000"
+      - "0.0.0.0:8000:8000"
     volumes:
+      - ./api/static:/app/api/static
       - ./config:/app/config
       - ./bid_projects:/app/bid_projects
       - ./.env:/app/.env:ro
+      - shared_data:/data/velobid
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/meta"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "512M"
+
+  hermes:
+    build: ./hermes
+    container_name: hermes
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8644:8642"
+    volumes:
+      - hermes_data:/root/.hermes
+      - shared_data:/data/velobid
+    environment:
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_PORT=8642
+      - API_SERVER_KEY=${HERMES_API_KEY:-velobid-internal}
+      - HERMES_MODEL=deepseek-v4-flash
+      - HERMES_PROVIDER=opencode-go
+      - HERMES_BASE_URL=https://opencode.ai/zen/go/v1
+      - HERMES_CREDENTIALS=${HERMES_CREDENTIALS_JSON}
+    depends_on:
+      velobid:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "Authorization: Bearer velobid-internal", "http://localhost:8642/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "4G"
+        reservations:
+          cpus: "0.5"
+          memory: "1G"
+
+volumes:
+  shared_data:
+  hermes_data:

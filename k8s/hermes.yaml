@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes
+  namespace: velobid
+  labels:
+    app: hermes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hermes
+  template:
+    metadata:
+      labels:
+        app: hermes
+    spec:
+      containers:
+        - name: hermes
+          image: velobid-hermes:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8642
+              protocol: TCP
+          env:
+            - name: API_SERVER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: velobid-secrets
+                  key: HERMES_API_KEY
+            - name: HERMES_CREDENTIALS
+              valueFrom:
+                secretKeyRef:
+                  name: velobid-secrets
+                  key: HERMES_CREDENTIALS_JSON
+          envFrom:
+            - configMapRef:
+                name: hermes-config
+          volumeMounts:
+            - name: hermes-data
+              mountPath: /root/.hermes
+            - name: shared-data
+              mountPath: /data/velobid
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2
+              memory: 4Gi
+          livenessProbe:
+            httpGet:
+              path: /v1/models
+              port: 8642
+              httpHeaders:
+                - name: Authorization
+                  value: "Bearer velobid-internal"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: 8642
+              httpHeaders:
+                - name: Authorization
+                  value: "Bearer velobid-internal"
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      volumes:
+        - name: hermes-data
+          persistentVolumeClaim:
+            claimName: hermes-data
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: shared-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hermes
+  namespace: velobid
+spec:
+  selector:
+    app: hermes
+  ports:
+    - port: 8642
+      targetPort: 8642
+      protocol: TCP
+      name: http
+  type: ClusterIP

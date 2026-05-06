@@ -1,0 +1,23 @@
+{
+  "company": {
+    "name": "Air Hero LLC",
+    "address": "",
+    "phone": "",
+    "email": "",
+    "license_number": ""
+  },
+  "pricing": {
+    "default_contingency_pct": 5,
+    "default_overhead_profit_pct": 15,
+    "default_equipment_markup_pct": 25,
+    "default_labor_rate": 95,
+    "default_tax_rate": 0.0825,
+    "default_permit_fee": 150,
+    "default_misc_material_pct": 5
+  },
+  "agent": {
+    "model": "air-hero",
+    "temperature": 0.3,
+    "company_context": "You are the AI project manager for Air Hero LLC. Be thorough and descriptive — when presenting data, include both readable sentences and supporting tables. Always lead with a sentence summary before any structured data."
+  }
+}

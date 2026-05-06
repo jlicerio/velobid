@@ -19,7 +19,7 @@ from api.schemas.blueprints import (
 # Paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BID_PROJECTS_DIR = PROJECT_ROOT / "bid_projects"
-BLUEPRINTS_ROOT = BID_PROJECTS_DIR / "api_generated"
+BLUEPRINTS_ROOT = Path("/data/velobid/blueprints")
 
 MAX_FILE_SIZE = 50 * 1024 * 1024
 ALLOWED_EXTENSIONS = frozenset({".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".tif"})

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "test_user",
+    "name": "Test User",
+    "role": "Estimator",
+    "password_salt": "5b2ae035677587e2b1593606dca0a187",
+    "password_hash": "3cc8680d54d79a6366a819cd56f1e1faa48c179eacc6bbb1992c2bd20e89a00c"
+  },
+  {
+    "id": "integration_tester",
+    "name": "Integration Tester",
+    "role": "Estimator",
+    "password_salt": "8fe2c6e2b7c6f8102aa8e4cc2c9cfecc",
+    "password_hash": "8372914f34e8d4fe57419b188e17ff34fd9372a5e0703b48c4c5ad07fe85bf8f"
+  },
+  {
+    "id": "new_tester",
+    "name": "New Tester",
+    "role": "Estimator",
+    "password_salt": "6baf2b0ec28416e801d68b8416c14368",
+    "password_hash": "b3ac1a6461a1ddbcd5a33614a9057c20e4abccd7d825f6f7fc800dc5e452a1cb"
+  }
+]

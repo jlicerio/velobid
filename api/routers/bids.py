@@ -1,6 +1,9 @@
 """Bid API routes for UI integration."""
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 
 from api.schemas.bids import (
     BidPreviewResponse,
@@ -11,6 +14,7 @@ from api.schemas.bids import (
     ProjectPricingResponse,
 )
 from api.services.bids import (
+    BID_PROJECTS_DIR,
     archive_project,
     create_project,
     generate_bid_files,
@@ -118,3 +122,39 @@ async def bid_generate_ws(websocket: WebSocket) -> None:
         await websocket.send_json({"event": "error", "message": str(error)})
     finally:
         await websocket.close()
+
+
+def _resolve_bid_pdf(project_id: str, trade: str, package: str, filename: str) -> Path:
+    """Resolve a bid PDF path from the URL parameters, with path traversal protection."""
+    safe_path = BID_PROJECTS_DIR / "api_generated" / project_id / trade / package / filename
+    resolved = safe_path.resolve()
+    # Ensure the resolved path stays inside BID_PROJECTS_DIR
+    if not str(resolved).startswith(str(BID_PROJECTS_DIR.resolve())):
+        raise HTTPException(status_code=403, detail="Invalid path")
+    if not resolved.exists() or not resolved.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return resolved
+
+
+@router.get("/bids/{project_id}/{trade}/{package}/view/{filename}")
+def view_bid_pdf(project_id: str, trade: str, package: str, filename: str) -> FileResponse:
+    """View a generated bid PDF inline in the browser."""
+    resolved = _resolve_bid_pdf(project_id, trade, package, filename)
+    return FileResponse(
+        path=resolved,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+@router.get("/bids/{project_id}/{trade}/{package}/download/{filename}")
+def download_bid_pdf(project_id: str, trade: str, package: str, filename: str) -> FileResponse:
+    """Download a generated bid PDF as an attachment."""
+    resolved = _resolve_bid_pdf(project_id, trade, package, filename)
+    return FileResponse(
+        path=resolved,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

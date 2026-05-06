@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: velobid
+  namespace: velobid
+  labels:
+    app: velobid
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: velobid
+  template:
+    metadata:
+      labels:
+        app: velobid
+    spec:
+      containers:
+        - name: velobid
+          image: velobid:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          env:
+            - name: HERMES_URL
+              value: "http://hermes:8642"
+            - name: HERMES_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: velobid-secrets
+                  key: HERMES_API_KEY
+          envFrom:
+            - configMapRef:
+                name: velobid-config
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data/velobid
+            - name: config
+              mountPath: /app/config
+            - name: bid-projects
+              mountPath: /app/bid_projects
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/meta
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/meta
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: shared-data
+        - name: config
+          hostPath:
+            path: /home/selfsim/projects/velobid/config
+            type: Directory
+        - name: bid-projects
+          hostPath:
+            path: /home/selfsim/projects/velobid/bid_projects
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: velobid
+  namespace: velobid
+spec:
+  selector:
+    app: velobid
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  type: ClusterIP

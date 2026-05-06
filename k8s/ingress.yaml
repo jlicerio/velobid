@@ -1,0 +1,48 @@
+# Tailscale Ingress (preserves existing funnel setup)
+# Requires: tailscale-operator installed in cluster
+# Alternative: standard nginx ingress (uncomment the second section)
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: velobid-tailscale
+  namespace: velobid
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/funnel: "true"
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: velobid
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: velobid
+                port:
+                  number: 8000
+---
+# Alternative: Standard nginx ingress (uncomment and remove above)
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: velobid-ingress
+#   namespace: velobid
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+#     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - host: velobid.example.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: velobid
+#                 port:
+#                   number: 8000
