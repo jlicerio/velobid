@@ -93,6 +93,7 @@ class ProjectPricingResponse(BaseModel):
     trade: str = "hvac"
     version_count: int = 0
     area_sf: float | None = None
+    status: str = "estimating"
     archived: bool = False
     city: str | None = None
     state: str | None = None

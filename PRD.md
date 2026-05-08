@@ -4,6 +4,8 @@
 
 VeloBid will rebuild its current vanilla JavaScript single-page application as a modern React 19 and TypeScript frontend while preserving the existing FastAPI backend, Docker deployment model, and complete product feature set. The rebuild is intended to improve maintainability, frontend velocity, UI consistency, mobile behavior, and the quality of the AI agent chat experience without disrupting the working production application.
 
+The updated product direction is a workspace-first bid environment for bidders, contractors, estimators, and project managers. It should feel closer to a project command center than a simple chat sidebar, with fast intake for files, pricebooks, and email attachments feeding directly into the agent's bid context.
+
 The current application is stable and functional. It supports login, project management, bid generation, AI chat, document viewing, blueprint analysis, bid versioning, settings, line item tables, and residential estimates. However, the frontend is implemented as an inline vanilla JavaScript SPA served from FastAPI static files. As the product surface grows, that structure increases the cost of change, makes regression control harder, and limits the ability to deliver a polished ChatGPT/Gemini-style assistant experience.
 
 The target frontend will be a componentized React application using Vite, TypeScript, Tailwind CSS, and shadcn/ui. The AI chat sidebar will be implemented using either CopilotKit or assistant-ui, selected during implementation after validating compatibility with VeloBid's existing `/api/v1/agent/chat` SSE stream, chat history APIs, speech controls, markdown tables, and project-scoped sessions.
@@ -94,6 +96,7 @@ The current frontend has outgrown a vanilla JS SPA structure. React and shadcn/u
 | Maintainability | TypeScript contracts reduce runtime ambiguity across API integrations |
 | Mobile responsiveness | Tailwind and component composition make breakpoint behavior explicit |
 | Visual consistency | A shared design system reduces one-off styles and interaction drift |
+| Low-friction intake | Local file, Excel, and IMAP flows reduce sign-in friction and keep contractors in the workspace |
 
 ### 3.3 Success Criteria
 
@@ -106,9 +109,36 @@ The rebuild will be considered successful when:
 | Chat quality | Chat supports streaming, markdown, suggestions, message actions, STT, TTS, and project-scoped sessions |
 | Responsiveness | Dashboard, chat, tables, document viewer, and dialogs work at desktop, tablet, and mobile breakpoints |
 | Performance | Initial dashboard route loads quickly under normal production data; route-level code splitting is used where appropriate |
-| Reliability | Login, dashboard, bid generation, chat streaming, document viewing, version restore, file upload, and settings pass regression QA |
+| Reliability | Login, dashboard, bid generation, chat streaming, document viewing, version restore, file upload, intake, and settings pass regression QA |
+| Intake | Uploads, imported spreadsheets, and email attachments are visible in the correct project workspace |
 | Deployment | Docker image serves the built React app and FastAPI backend on port `8000` |
 | Maintainability | Feature code is organized by domain with typed API clients and reusable UI components |
+
+### 3.4 Workspace-First Product Direction
+
+The primary experience should center on a project workspace that combines chat, documents, bid work, and intake. The main authenticated route should behave like a project command center rather than a loose collection of pages.
+
+| Workspace Principle | Product Requirement |
+|---|---|
+| Project-first shell | `/projects/:projectId` should act as the main workspace route with chat, bid tabs, documents, versions, and intake surfaced together |
+| Fast intake | The chat composer should support attachments and project-scoped uploads so files can be handed to the agent without leaving the conversation |
+| Project inbox | Uploaded files, emailed attachments, and imported spreadsheets should land in a project-scoped inbox that the agent can read |
+| Context preservation | The selected project, trade, and attached files should persist across tab changes inside the workspace |
+| Mobile behavior | On smaller screens, the workspace should compress into a drawer/sheet pattern while keeping upload and chat actions reachable |
+
+### 3.5 Integration Principles
+
+VeloBid should prioritize low-friction integrations that work with local files or standard protocols before introducing subscription-heavy SaaS dependencies.
+
+| Integration Type | MVP Approach | Notes |
+|---|---|---|
+| Local files | Watched folders for `.xlsx`, `.csv`, `.json`, and `.pdf` inputs | No SaaS auth required; best fit for pricebooks, catalogs, and exports |
+| Email | IMAP polling or relay into a project inbox | Use for bid invites, quote attachments, and thread-to-project intake |
+| Microsoft Excel | OneDrive-synced local folder or direct workbook import/export | Avoid Microsoft Graph in the MVP unless live cloud editing becomes necessary |
+| OCR / document intake | Run on uploaded or emailed PDFs and scans | Converts paper specs and scanned submittals into readable project context |
+| SaaS connectors | Defer unless export/import or direct API access becomes a clear requirement | Airtable and Notion stay optional, not core |
+
+All imported data should normalize into VeloBid-owned project and pricing records before the agent uses it. The agent should consume the normalized data, not depend on the external source at runtime.
 
 ## 4. Tech Stack Decision
 
@@ -162,19 +192,24 @@ Tailwind theme tokens should be defined in `src/styles/globals.css` and `tailwin
 | Login | `/login` | `LoginPage`, `LoginForm`, `BidderSelect` | `Form`, `Card`, `Input`, `Select`, `Button`, `Alert` | `POST /api/v1/auth/login`, `GET /api/v1/bidders`, `GET /api/v1/auth/me` |
 | Project dashboard grid | `/projects` | `ProjectsPage`, `ProjectGrid`, `ProjectCard`, `ProjectFilters` | `Card`, `Badge`, `Button`, `Tabs`, `DropdownMenu`, `Skeleton` | `GET /api/v1/projects`, `GET /api/v1/projects/with-pricing`, project archive/unarchive endpoints |
 | Archive/unarchive projects | `/projects` | `ProjectArchiveAction`, `ArchiveConfirmDialog` | `AlertDialog`, `DropdownMenuItem`, `Toast` | project archive/unarchive endpoints |
-| Agent chat sidebar | App shell / project pages | `AgentChatSidebar`, `ChatPanel`, `ChatMessageList`, `ChatComposer`, `ChatSuggestions` | CopilotKit or assistant-ui, `ResizablePanel`, `Button`, `Tooltip`, `ScrollArea` | `POST /api/v1/agent/chat`, session/message endpoints |
+| Project workspace shell | `/projects/:projectId` | `ProjectWorkspaceShell`, `ProjectContextRail`, `WorkspaceTabs`, `ProjectInboxPanel` | `ResizablePanel`, `Tabs`, `Sheet`, `ScrollArea`, `Badge` | project summary, bid, document, version, and intake endpoints |
+| Agent chat sidebar | App shell / project pages | `AgentChatSidebar`, `ChatPanel`, `ChatMessageList`, `ChatComposer`, `ChatComposerAttachments`, `ChatSuggestions` | CopilotKit or assistant-ui, `ResizablePanel`, `Button`, `Tooltip`, `ScrollArea`, `DropdownMenu` | `POST /api/v1/agent/chat`, session/message endpoints |
 | Chat history | Project pages | `ChatSessionProvider`, `ChatHistoryList` | Chat library primitives, `ScrollArea`, `Skeleton` | session and message endpoints |
 | STT microphone | Chat composer | `SpeechToTextButton` | `Button`, `Tooltip`, Web Speech API wrapper | Browser Web Speech API; no backend required unless existing route exists |
 | TTS playback | Chat messages | `TextToSpeechButton` | `Button`, `Tooltip` | Browser SpeechSynthesis API |
 | Markdown tables and sparklines | Chat messages / bid preview | `MarkdownRenderer`, `SparklineCell` | `react-markdown`, `remark-gfm`, custom table components | Consumes assistant and bid markdown payloads |
+| Composer attachments | Chat composer | `AttachmentMenu`, `UploadChipList`, `UploadProgressList` | `Button`, `DropdownMenu`, `Progress`, `Tooltip` | multipart upload endpoint, project inbox endpoint |
 | Bid preview | `/projects/:projectId/bids/preview` or project detail tab | `BidPreviewPanel`, `BidPreviewToolbar` | `Card`, `Tabs`, `Button`, `ScrollArea` | bid preview endpoint |
 | Bid generation | Project detail | `GenerateBidButton`, `BidGenerationDialog`, `BidGenerationStatus` | `Dialog`, `Progress`, `Button`, `Toast` | bid generate endpoint |
 | Bid view/download | Project detail / bid route | `BidViewer`, `BidDownloadButton` | `Sheet`, `Button`, `DropdownMenu` | bid view/download endpoints |
 | Bid tables | Project detail / bid preview | `BidTable`, `LineItemsTable`, `SortableHeader` | `Table`, `Checkbox`, `DropdownMenu`, `Badge` | bid preview/view endpoints, line item payloads |
 | Document viewer | `/projects/:projectId/documents` | `DocumentViewerPage`, `DocumentTree`, `DocumentSheet`, `DocumentFrame` | `Sheet`, `ResizablePanel`, `ScrollArea`, custom `iframe` | blueprints list/get endpoints, files list/delete endpoints |
+| Project inbox | `/projects/:projectId/inbox` | `ProjectInboxPage`, `ProjectInboxPanel`, `ImportedFileList` | `Card`, `Table`, `Badge`, `ScrollArea` | upload/import status endpoints |
 | Sidebar tree navigation | Document viewer | `DocumentTree`, `TreeNode`, `BlueprintNode`, `PdfNode` | `ScrollArea`, `Collapsible`, `Button` | `GET /api/v1/files/list`, blueprint list endpoints |
 | Blueprint Vision | `/projects/:projectId/blueprints/analyze` or dialog from documents | `BlueprintVisionDialog`, `BlueprintUploadDropzone`, `VisionResultPanel` | `Dialog`, `Form`, `Input`, `Progress`, `Card`, `Textarea` | blueprint upload/list/get endpoints, vision analyze endpoint |
-| File upload | Documents / blueprint vision | `FileUploadDropzone`, `UploadProgressList` | `Card`, `Input`, `Progress`, `Toast` | blueprint upload endpoint |
+| File upload | Documents / blueprint vision / chat composer | `FileUploadDropzone`, `UploadProgressList` | `Card`, `Input`, `Progress`, `Toast` | file upload endpoint, blueprint upload endpoint |
+| Excel pricebook import | Settings / pricing admin | `PricebookImportCard`, `WorkbookPreviewTable`, `ImportMappingDialog` | `Card`, `Dialog`, `Table`, `Button` | `.xlsx` import endpoint, settings merge endpoint |
+| Integration settings | `/settings/integrations` | `IntegrationSettingsForm`, `SourceToggleList`, `MailboxConfigForm` | `Form`, `Switch`, `Input`, `Select`, `Card` | settings GET/PATCH, integration status endpoints |
 | File delete | Documents | `DeleteFileDialog`, `FileActionsMenu` | `AlertDialog`, `DropdownMenu`, `Toast` | file delete endpoint |
 | Version management | Project detail / bid route | `BidVersionsPanel`, `VersionDiffDialog`, `RestoreVersionButton` | `Tabs`, `Table`, `Dialog`, `AlertDialog`, `Badge` | version diff and restore endpoints |
 | Settings | `/settings` | `SettingsPage`, `SettingsTabs`, `ProfileSettingsForm`, `SystemSettingsForm` | `Form`, `Tabs`, `Card`, `Switch`, `Input`, `Textarea` | `GET /api/v1/settings`, settings update endpoint if available |
@@ -191,16 +226,22 @@ The React application must preserve:
 
 - Bidder + user + password login flow.
 - Project cards, active/archive filtering, archive/unarchive actions.
+- Project workspace as the default authenticated experience.
 - Project-scoped agent chat sessions.
 - SSE streaming chat responses.
+- Chat composer attachments and upload staging.
 - STT input and TTS message playback.
 - Markdown rendering, including markdown tables and bid-related structured output.
 - Bid preview, bid generation, bid view, and bid download.
 - Document tree navigation and embedded document viewing.
+- Project inbox access for uploaded files and imported attachments.
 - Blueprint upload and vision analysis.
 - Bid version diff and restore.
 - Line item table sorting.
 - Settings, bidder management, user management, and password management.
+- Excel pricebook import and pricing sync.
+- IMAP email intake for bid invites and attachments.
+- Integration toggles for source connectors and agent permissions.
 - Residential estimates.
 - Mobile layouts at `768px` and `480px`.
 
@@ -215,6 +256,8 @@ The React app will be a Vite application under a new frontend directory:
 ```
 
 The app will be organized around domain features, shared UI primitives, API clients, and route-level pages. Route pages should compose feature components and delegate API access to typed hooks.
+
+The authenticated shell should treat the project workspace as the center of gravity. Chat, documents, versions, bid work, and intake should all remain visible without forcing users to abandon the current project context.
 
 Primary frontend layers:
 
@@ -231,7 +274,7 @@ Primary frontend layers:
 
 ### 6.2 Backend Integration
 
-The FastAPI backend remains the source of truth for authentication, projects, bids, files, blueprints, versions, chat, and settings.
+The FastAPI backend remains the source of truth for authentication, projects, bids, files, project intake, blueprints, versions, chat, and settings.
 
 Development integration:
 
@@ -424,8 +467,9 @@ API route names are based on the current OpenAPI route inventory and QA report. 
 |---|---|---|---|
 | `/api/v1/health` | GET | `SystemStatusCard` | Display backend health in admin/debug settings |
 | `/api/v1/meta` | GET | `AppBootstrap`, `SystemStatusCard` | Read app metadata/version if exposed |
-| `/api/v1/settings` | GET | `SettingsPage`, `SystemSettingsForm` | Load application settings |
+| `/api/v1/settings` | GET | `SettingsPage`, `SystemSettingsForm` | Load company, pricing, agent, and integration settings |
 | `/api/v1/settings` or configured update route | PUT/PATCH/POST | `SystemSettingsForm` | Persist changed settings if supported |
+| `/api/v1/settings/integrations` | GET/PATCH | `SettingsPage`, `IntegrationSettingsForm` | Enable or disable email, Excel, OCR, and source connector capabilities |
 
 ### 8.2 Authentication
 
@@ -489,16 +533,19 @@ Agent chat response contract must support:
 - Error events.
 - Optional structured artifacts, tables, or metadata if currently emitted.
 
-### 8.7 Files, Blueprints, and Document Viewer
+### 8.7 Files, Blueprints, Intake, and Document Viewer
 
 | Endpoint Group | Method(s) | Consumer Component(s) | Expected Use |
 |---|---|---|---|
+| project file upload endpoint | POST multipart | `AttachmentMenu`, `ProjectInboxPanel`, `FileUploadDropzone` | Upload PDFs, images, spreadsheets, and bid attachments into a project inbox |
 | `/api/v1/files/list` | GET | `DocumentTree`, `ProjectFilesPanel` | List available files |
 | file delete endpoint | DELETE | `DeleteFileDialog`, `FileActionsMenu` | Delete file |
 | blueprint upload endpoint | POST multipart | `BlueprintUploadDropzone` | Upload blueprint/PDF/image files |
 | blueprint list endpoint | GET | `DocumentTree`, `BlueprintVisionPage` | List blueprints |
 | blueprint get endpoint | GET | `DocumentFrame`, `DocumentSheet` | Render selected blueprint/PDF in iframe |
 | `/api/v1/vision/analyze` | POST | `BlueprintVisionDialog`, `VisionResultPanel` | Run AI blueprint analysis |
+| pricebook import endpoint | POST multipart/JSON | `PricebookImportCard`, `WorkbookPreviewTable` | Import Excel or CSV pricing data into normalized pricing settings |
+| email intake endpoint | POST/GET | `IntegrationSettingsForm`, `ProjectInboxPanel` | Relay IMAP-imported email messages and attachments into the workspace |
 
 ### 8.8 Versions
 
@@ -523,14 +570,16 @@ React Router will provide route-level ownership and layout separation.
 | `/login` | `LoginPage` | Public | Bidder/user/password login |
 | `/` | Redirect | Authenticated | Redirect to `/projects` |
 | `/projects` | `ProjectsPage` | Authenticated | Project dashboard grid |
-| `/projects/:projectId` | `ProjectDetailPage` | Authenticated | Project summary, bid tabs, files, versions |
+| `/projects/:projectId` | `ProjectDetailPage` | Authenticated | Project workspace, bid tabs, files, versions, intake |
 | `/projects/:projectId/bids` | `ProjectBidsPage` or project tab | Authenticated | Bid preview, generation, view, download |
 | `/projects/:projectId/documents` | `DocumentViewerPage` | Authenticated | Document tree and iframe viewer |
+| `/projects/:projectId/inbox` | `ProjectInboxPage` | Authenticated | Uploaded files, imported spreadsheets, emailed attachments |
 | `/projects/:projectId/blueprints` | `BlueprintsPage` | Authenticated | Blueprint list and upload |
 | `/projects/:projectId/blueprints/analyze` | `BlueprintVisionPage` | Authenticated | AI blueprint vision analysis |
 | `/residential` | `ResidentialEstimatesPage` | Authenticated | Residential estimate workflow |
 | `/settings` | `SettingsPage` | Authenticated | Settings overview |
 | `/settings/profile` | `SettingsPage` tab route | Authenticated | Current user/profile settings |
+| `/settings/integrations` | `SettingsPage` tab route | Authenticated/admin | Email, Excel, OCR, and source connector settings |
 | `/settings/bidders` | `SettingsPage` tab route | Authenticated/admin | Bidder management |
 | `/settings/users` | `SettingsPage` tab route | Authenticated/admin | User management |
 | `/settings/trades` | `SettingsPage` tab route | Authenticated/admin | Trades reference |
@@ -541,6 +590,7 @@ Route behavior:
 - Authenticated routes must check `/api/v1/auth/me` or equivalent persisted auth state.
 - Project routes must validate `projectId` and show a not-found state if missing.
 - The chat sidebar should persist across authenticated routes.
+- The main project workspace route should be the default post-login destination.
 - On mobile, the chat sidebar should become a sheet/drawer launched from the app shell.
 - Route transitions must not interrupt an active chat stream unless the selected project context changes.
 
@@ -603,6 +653,8 @@ Exit criteria:
 - Complete CopilotKit vs assistant-ui spike.
 - Implement VeloBid chat adapter for `/api/v1/agent/chat`.
 - Implement project-scoped sessions and message history.
+- Implement attachment-aware chat composer and upload staging.
+- Implement project context rail and workspace-level message actions.
 - Implement streaming, stop generation, retry, suggestions, markdown rendering, tables, STT, and TTS.
 - Preserve localStorage mapping if backend session model requires it.
 
@@ -611,12 +663,16 @@ Exit criteria:
 - Chat feels materially more modern than the current sidebar.
 - Streaming works with real backend SSE events.
 - Stream-level error events are displayed gracefully.
+- Users can attach files from the composer and see them staged in the workspace.
 
-#### Phase 5: Documents and Blueprint Vision
+#### Phase 5: Workspace, Documents, and Intake
 
+- Implement project workspace shell and default `/projects/:projectId` experience.
 - Implement document viewer route.
 - Implement sidebar tree navigation.
 - Implement custom iframe viewer.
+- Implement project inbox for uploaded files and imported attachments.
+- Implement project-scoped file upload from chat, documents, and blueprint surfaces.
 - Implement blueprint upload.
 - Implement vision analysis dialog/page and results rendering.
 - Implement file delete with confirmation.
@@ -624,11 +680,15 @@ Exit criteria:
 Exit criteria:
 
 - Users can browse and inspect blueprints/PDFs.
+- Users can upload files into a project and see them in the inbox.
 - AI blueprint analysis matches current functionality.
 
-#### Phase 6: Settings, Users, Bidders, Residential
+#### Phase 6: Settings, Users, Bidders, Residential, and Integrations
 
 - Implement settings tabs.
+- Implement integration toggles and source configuration forms.
+- Implement spreadsheet import controls for Excel pricebooks.
+- Implement IMAP email intake settings and status indicators.
 - Implement bidder and user management.
 - Implement password set/reset flow.
 - Implement trades reference UI.
@@ -637,6 +697,7 @@ Exit criteria:
 Exit criteria:
 
 - Administrative and estimating workflows match existing SPA.
+- Integrations can be enabled or disabled from settings without exposing SaaS complexity.
 
 #### Phase 7: Production Cutover
 
@@ -650,7 +711,7 @@ Exit criteria:
 Exit criteria:
 
 - Production Docker image serves the React app on port `8000`.
-- No critical regressions in login, dashboard, chat, bids, documents, blueprint vision, versions, settings, or residential estimates.
+- No critical regressions in login, dashboard, chat, bids, documents, blueprint vision, versions, intake, settings, or residential estimates.
 
 ### 10.3 Rollback Strategy
 
@@ -715,15 +776,27 @@ Proposed structure:
 │   │   │   │   ├── ProjectFilters.tsx
 │   │   │   │   ├── ProjectGrid.tsx
 │   │   │   │   └── types.ts
+│   │   │   ├── workspace/
+│   │   │   │   ├── ProjectWorkspaceShell.tsx
+│   │   │   │   ├── ProjectContextRail.tsx
+│   │   │   │   ├── WorkspaceTabs.tsx
+│   │   │   │   └── ProjectInboxPanel.tsx
 │   │   │   ├── chat/
 │   │   │   │   ├── api.ts
 │   │   │   │   ├── chatStream.ts
 │   │   │   │   ├── AgentChatSidebar.tsx
 │   │   │   │   ├── ChatComposer.tsx
+│   │   │   │   ├── ChatComposerAttachments.tsx
 │   │   │   │   ├── ChatMessage.tsx
 │   │   │   │   ├── ChatMessageList.tsx
 │   │   │   │   ├── SpeechToTextButton.tsx
 │   │   │   │   ├── TextToSpeechButton.tsx
+│   │   │   │   └── types.ts
+│   │   │   ├── intake/
+│   │   │   │   ├── api.ts
+│   │   │   │   ├── AttachmentMenu.tsx
+│   │   │   │   ├── FileUploadDropzone.tsx
+│   │   │   │   ├── ImportProgressList.tsx
 │   │   │   │   └── types.ts
 │   │   │   ├── bids/
 │   │   │   │   ├── api.ts
@@ -752,6 +825,9 @@ Proposed structure:
 │   │   │   ├── settings/
 │   │   │   │   ├── api.ts
 │   │   │   │   ├── BiddersTable.tsx
+│   │   │   │   ├── IntegrationSettingsForm.tsx
+│   │   │   │   ├── MailboxConfigForm.tsx
+│   │   │   │   ├── PricebookImportCard.tsx
 │   │   │   │   ├── SettingsTabs.tsx
 │   │   │   │   ├── SystemSettingsForm.tsx
 │   │   │   │   ├── UsersTable.tsx
@@ -773,6 +849,7 @@ Proposed structure:
 │   │   │   ├── LoginPage.tsx
 │   │   │   ├── ProjectsPage.tsx
 │   │   │   ├── ProjectDetailPage.tsx
+│   │   │   ├── ProjectInboxPage.tsx
 │   │   │   ├── DocumentViewerPage.tsx
 │   │   │   ├── BlueprintVisionPage.tsx
 │   │   │   ├── ResidentialEstimatesPage.tsx
@@ -784,7 +861,10 @@ Proposed structure:
 │   │       ├── api.ts
 │   │       ├── bid.ts
 │   │       ├── chat.ts
+│   │       ├── integration.ts
+│   │       ├── intake.ts
 │   │       ├── project.ts
+│   │       ├── workspace.ts
 │   │       └── user.ts
 │   ├── tests/
 │   │   ├── unit/
@@ -827,19 +907,19 @@ If the actual backend currently lives at repository root rather than `backend/`,
 5. Should chat support artifacts as first-class panels for bid tables, documents, or generated estimates?
 6. Should stream-level errors continue to be shown inside the chat transcript, or should they use toast/error banners?
 
-### 12.4 Documents and Blueprints
+### 12.4 Documents and Intake
 
-1. Which file types must the document iframe support: PDF, image, generated HTML, or other document formats?
-2. Are blueprint uploads project-scoped, bidder-scoped, or global?
-3. What file size limits and accepted MIME types should the upload UI enforce?
-4. Should blueprint vision analysis be a route, a dialog, or both?
+1. Which file types must the upload UI support on day one beyond PDF and image files?
+2. What file size limits and accepted MIME types should the upload UI enforce?
+3. Should OCR run automatically on upload, or only when the user requests it?
+4. Should imported spreadsheets update pricing settings immediately or stage changes for review first?
+5. Should the project inbox show imported email attachments alongside uploaded files?
 
 ### 12.5 Product Behavior
 
-1. Should `/projects/:projectId` become the main workspace route, with documents, bids, versions, and chat as tabs?
-2. Should residential estimates be standalone or project-linked?
-3. Should archived projects be hidden by default as in the current SPA?
-4. Should bid generation be blocking, backgrounded, or stream progress updates if the backend supports it?
+1. Should residential estimates be standalone or project-linked?
+2. Should archived projects be hidden by default as in the current SPA?
+3. Should bid generation be blocking, backgrounded, or stream progress updates if the backend supports it?
 
 ### 12.6 Deployment
 
@@ -855,4 +935,3 @@ If the actual backend currently lives at repository root rather than `backend/`,
 3. What fixture data is available for deterministic bid, blueprint, and residential estimate testing?
 4. Should accessibility testing be part of the release gate?
 5. Should visual regression screenshots be captured for desktop, `768px`, and `480px` breakpoints?
-

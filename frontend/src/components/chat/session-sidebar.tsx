@@ -62,7 +62,7 @@ export function SessionSidebar({ collapsed, onToggle }: SessionSidebarProps) {
   }
 
   return (
-    <div className="flex w-60 flex-col border-r border-border bg-muted/10">
+    <div className="flex w-52 flex-col border-r border-border bg-muted/10">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs font-medium text-muted-foreground">Chat History</span>

@@ -33,6 +33,20 @@ TRADES_DIR = CONFIG_DIR / "trades"
 BID_PROJECTS_DIR = Path("/data/velobid/bids")
 OUTPUT_DIR = BID_PROJECTS_DIR / "api_generated"
 LEGACY_DEFAULT_BIDDER_ID = "air_hero"
+DEFAULT_PROJECT_STATUS = "estimating"
+
+PROJECT_STATUS_LABELS: dict[str, str] = {
+    "draft": "Draft",
+    "estimating": "Estimating",
+    "estimate": "Estimating",
+    "pending_clarification": "Pending Clarification",
+    "pending_info": "Pending Clarification",
+    "ready_to_submit": "Ready to Submit",
+    "submitted": "Submitted",
+    "won": "Won",
+    "lost": "Lost",
+    "on_hold": "On Hold",
+}
 
 
 @contextmanager
@@ -197,6 +211,23 @@ def _summary_from_json_file(path: Path) -> ConfigSummary:
     )
 
 
+def normalize_project_status(status: str | None) -> str:
+    """Convert stored project status values into a canonical lifecycle status."""
+    if not status:
+        return DEFAULT_PROJECT_STATUS
+
+    clean = re.sub(r"[^a-z0-9_]", "", status.strip().lower().replace(" ", "_"))
+    if clean in PROJECT_STATUS_LABELS:
+        return "estimating" if clean == "estimate" else clean
+    return clean or DEFAULT_PROJECT_STATUS
+
+
+def project_status_label(status: str | None) -> str:
+    """Format a project status for UI and export use."""
+    normalized = normalize_project_status(status)
+    return PROJECT_STATUS_LABELS.get(normalized, normalized.replace("_", " ").title())
+
+
 # ---------------------------------------------------------------------------
 # Module-level cache for list_projects_with_pricing
 # ---------------------------------------------------------------------------
@@ -224,6 +255,7 @@ def list_projects_with_pricing(bidder_id: str | None = None) -> list[ProjectPric
         state = project_data.get("state")
         area_sf = project_data.get("total_area_sf")
         archived = project_data.get("archived", False)
+        status = normalize_project_status(project_data.get("status"))
 
         # Count versions from OUTPUT_DIR/project_id/hvac/versions/index.json
         versions_path = OUTPUT_DIR / project_id / "hvac" / "versions" / "index.json"
@@ -261,6 +293,7 @@ def list_projects_with_pricing(bidder_id: str | None = None) -> list[ProjectPric
                 trade="hvac",
                 version_count=version_count,
                 area_sf=area_sf,
+                status=status,
                 archived=archived,
                 city=city,
                 state=state,
@@ -300,6 +333,7 @@ def create_project(request: CreateProjectRequest, bidder_id: str) -> ProjectPric
             "contingency_pct": trade_data.get("contingency_pct", 5.0),
             "overhead_profit_pct": trade_data.get("overhead_profit_pct", 15.0),
         },
+        "status": DEFAULT_PROJECT_STATUS,
         "archived": False,
     }
 
@@ -312,6 +346,7 @@ def create_project(request: CreateProjectRequest, bidder_id: str) -> ProjectPric
         name=request.name,
         trade=request.trade,
         area_sf=request.total_area_sf,
+        status=DEFAULT_PROJECT_STATUS,
         archived=False,
         city=request.city,
         state=request.state,

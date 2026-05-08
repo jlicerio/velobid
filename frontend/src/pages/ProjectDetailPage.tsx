@@ -5,6 +5,7 @@ import type { BidPreviewResponse, GeneratedFileResponse } from "@/types/bids";
 import type { Project } from "@/api/services/projects";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
 import { fetchProjectsWithPricing } from "@/api/services/projects";
 import { previewBid, generateBid } from "@/api/services/bids";
 import { toast } from "sonner";
@@ -100,7 +101,15 @@ export function ProjectDetailPage() {
           <button onClick={() => navigate("/projects")} className="text-sm text-muted-foreground hover:text-foreground mb-2 block">
             &larr; Back to Projects
           </button>
-          <h1 className="text-xl font-bold">{project.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-bold">{project.name}</h1>
+            <ProjectStatusBadge status={project.status} archived={project.archived} />
+            {project.archived && (
+              <Badge variant="secondary" className="rounded-full">
+                Archived
+              </Badge>
+            )}
+          </div>
           {(project.city || project.state) && (
             <p className="text-sm text-muted-foreground">{project.city}{project.city && project.state ? ", " : ""}{project.state}</p>
           )}

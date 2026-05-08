@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Project } from "@/api/services/projects";
 import { fetchProjectsWithPricing, archiveProject, bulkArchiveProjects, exportPortfolioCsv } from "@/api/services/projects";
 import { previewBid } from "@/api/services/bids";
+import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
 import { Search, RefreshCw, Archive, FolderKanban, BadgeDollarSign, Clock3, Layers3, Download } from "lucide-react";
 
 export function ProjectsPage() {
@@ -94,9 +95,10 @@ export function ProjectsPage() {
   }
 
   const filtered = projects.filter((p) => {
+    if (filter === "all") return !p.archived;
     if (filter === "active") return !p.archived;
     if (filter === "archived") return p.archived;
-    return true;
+    return !p.archived;
   }).filter((project) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase().trim();
@@ -267,7 +269,9 @@ export function ProjectsPage() {
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                   <span className="ml-1.5 text-xs opacity-60">
-                    {f === "all" ? projects.length : projects.filter(p => f === "active" ? !p.archived : p.archived).length}
+                    {f === "all" || f === "active"
+                      ? projects.filter((p) => !p.archived).length
+                      : projects.filter((p) => p.archived).length}
                   </span>
                 </button>
               ))}
@@ -345,10 +349,10 @@ export function ProjectsPage() {
               {filtered.map((project) => (
                 <div
                   key={project.id}
-                  className="border rounded-xl p-5 hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer bg-card group"
+                  className="group cursor-pointer rounded-xl border bg-card p-5 transition-all duration-200 hover:border-primary/20 hover:shadow-lg"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <input
                         type="checkbox"
@@ -366,43 +370,52 @@ export function ProjectsPage() {
                         </p>
                       </div>
                     </div>
-                    {project.archived && (
-                      <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0 ml-2">
-                        Archived
-                      </span>
-                    )}
+                    <div className="flex flex-wrap items-center justify-end gap-2 shrink-0 ml-2">
+                      <ProjectStatusBadge status={project.status} archived={project.archived} />
+                      {project.archived && (
+                        <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                          Archived
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Total Bid</div>
-                      <div className="text-base font-bold mt-0.5">{money(project.total_bid)}</div>
+                  <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        Total Bid
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tracking-tight">{money(project.total_bid)}</div>
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         {project.total_labor_hours != null ? "Labor Hours" : "Labor Cost"}
                       </div>
-                      <div className="text-base font-bold mt-0.5">
+                      <div className="mt-1 text-lg font-semibold tracking-tight">
                         {project.total_labor_hours != null
                           ? `${project.total_labor_hours.toLocaleString()} hrs`
                           : money(project.total_labor)}
                       </div>
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Materials</div>
-                      <div className="text-base font-bold mt-0.5">{money(project.total_material)}</div>
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        Materials
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tracking-tight">{money(project.total_material)}</div>
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Area</div>
-                      <div className="text-base font-bold mt-0.5">
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        Area
+                      </div>
+                      <div className="mt-1 text-lg font-semibold tracking-tight">
                         {project.area_sf ? `${project.area_sf.toLocaleString()} SF` : "—"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      {project.trade ? <span className="capitalize">{project.trade}</span> : null}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {project.trade ? <span className="rounded-full border bg-muted/30 px-2 py-1 capitalize">{project.trade}</span> : null}
                     </div>
                     <div className="flex gap-2">
                       <button

@@ -9,6 +9,7 @@ export interface Project {
   total_labor_hours?: number
   area_sf?: number
   trade?: string
+  status?: string
   archived?: boolean
   city?: string
   state?: string

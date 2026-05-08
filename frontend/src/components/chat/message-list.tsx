@@ -26,17 +26,21 @@ export function MessageList() {
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
+      <div className="m-3 flex flex-1 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/70 bg-card/60 px-6 py-10 text-center text-muted-foreground">
         <MessageSquare className="h-12 w-12 opacity-20" />
-        <p className="text-sm">Start a conversation with the AI assistant</p>
-        <p className="text-xs">Ask about project pricing, materials, or generate bids</p>
+        <p className="text-sm font-medium text-foreground">
+          Start a conversation with the AI assistant
+        </p>
+        <p className="max-w-sm text-xs leading-relaxed">
+          Ask about project pricing, materials, labor hours, or have it generate a bid summary.
+        </p>
       </div>
     )
   }
 
   return (
     <ScrollArea
-      className="flex-1"
+      className="flex-1 min-h-0"
       onScroll={handleScroll}
     >
       <div className="py-2">
