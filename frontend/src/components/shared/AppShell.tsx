@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { useChat } from "@/lib/chat-store";
 import { logout } from "@/api/services/auth";
+import { fetchProjectsWithPricing } from "@/api/services/projects";
 
 const navItems = [
   { to: "/projects", label: "Projects", icon: "📋" },
@@ -16,9 +17,16 @@ export function AppShell() {
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const { state, dispatch, createSession } = useChat();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
 
   // Detect mobile and auto-toggle sidebar
   useEffect(() => {
@@ -60,6 +68,90 @@ export function AppShell() {
       dispatch({ type: "SET_SESSION", id: newSessionId });
     }
   }, [currentProjectId]);
+
+  useEffect(() => {
+    if (currentProjectId) return;
+
+    let cancelled = false;
+
+    async function injectDashboardContext() {
+      const sessionId = state.currentSessionId;
+      if (!sessionId) return;
+
+      const session = state.sessions[sessionId];
+      const hasDashboardContext = session?.messages.some(
+        (message) =>
+          message.role === "system" &&
+          message.content.includes("[dashboard-context]"),
+      );
+
+      if (hasDashboardContext) return;
+
+      try {
+        const projects = await fetchProjectsWithPricing();
+        if (cancelled) return;
+
+        const active = projects.filter((p) => !p.archived);
+        const archived = projects.filter((p) => p.archived);
+        const totalBid = projects.reduce((sum, p) => sum + (p.total_bid || 0), 0);
+        const totalLaborHours = projects.reduce(
+          (sum, p) => sum + (p.total_labor_hours || 0),
+          0,
+        );
+        const totalMaterial = projects.reduce(
+          (sum, p) => sum + (p.total_material || 0),
+          0,
+        );
+
+        const topProjects = [...projects]
+          .sort((a, b) => (b.total_bid || 0) - (a.total_bid || 0))
+          .slice(0, 5)
+          .map(
+            (project) =>
+              `- ${project.name} | ${project.trade || "unknown"} | ${project.city || "?"}, ${project.state || "?"} | bid ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(project.total_bid || 0)} | labor ${project.total_labor_hours?.toLocaleString() ?? "—"} hrs`,
+          );
+
+        const dashboardContext = [
+          "[dashboard-context] You are helping the user manage the full VeloBid projects dashboard.",
+          "Answer using the portfolio context below when the user asks about projects, totals, status, labor hours, or management actions.",
+          "",
+          `Portfolio summary: ${projects.length} projects total, ${active.length} active, ${archived.length} archived.`,
+          `Portfolio totals: bid ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalBid)}, labor hours ${totalLaborHours.toLocaleString(undefined, { maximumFractionDigits: 1 })}, materials ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalMaterial)}.`,
+          "",
+          "Available dashboard tools:",
+          "- Search and filter projects",
+          "- Sort by name, bid value, labor cost, labor hours, or area",
+          "- Archive or unarchive a project",
+          "- Open a project to review line items and detailed bid data",
+          "- Refresh the portfolio totals",
+          "",
+          "Top projects:",
+          ...topProjects,
+          "",
+          "If the user asks for an overview, summarize the portfolio. If they ask for a project-specific detail, ask which project they mean or use the best matching project from the current view.",
+        ].join("\n");
+
+        dispatch({
+          type: "ADD_MESSAGE",
+          sessionId,
+          message: {
+            id: `dashboard-context-${Date.now()}`,
+            role: "system",
+            content: dashboardContext,
+            timestamp: Date.now(),
+          },
+        });
+      } catch {
+        // Dashboard context is helpful, but never block the UI if the fetch fails.
+      }
+    }
+
+    void injectDashboardContext();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProjectId, state.currentSessionId, state.sessions, dispatch]);
 
   // Resize handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

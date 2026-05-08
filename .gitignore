@@ -51,3 +51,8 @@ server_log.txt
 api/static/assets/
 api/static/index.html
 qa-reports/
+
+# Local automation artifacts
+.kaban/
+bid_projects/residential/qa_regression_user_*/
+config/projects/qa_regression_user_*.json

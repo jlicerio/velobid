@@ -22,6 +22,9 @@ spec:
           ports:
             - containerPort: 8642
               protocol: TCP
+            - containerPort: 8640
+              protocol: TCP
+              name: admin
           env:
             - name: API_SERVER_KEY
               valueFrom:
@@ -87,4 +90,8 @@ spec:
       targetPort: 8642
       protocol: TCP
       name: http
+    - port: 8640
+      targetPort: 8640
+      protocol: TCP
+      name: admin
   type: ClusterIP

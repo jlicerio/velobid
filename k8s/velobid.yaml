@@ -30,6 +30,18 @@ spec:
                 secretKeyRef:
                   name: velobid-secrets
                   key: HERMES_API_KEY
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: velobid-secrets
+                  key: STRIPE_SECRET_KEY
+                  optional: true
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: velobid-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+                  optional: true
           envFrom:
             - configMapRef:
                 name: velobid-config

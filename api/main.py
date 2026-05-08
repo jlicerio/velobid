@@ -13,6 +13,7 @@ from api.routers.ai import router as ai_router
 from api.routers.auth import router as auth_router
 from api.routers.bidders import router as bidders_router
 from api.routers.bids import router as bids_router
+from api.routers.billing import router as billing_router
 from api.routers.files import router as files_router
 from api.routers.residential import router as residential_router
 from api.routers.sync import router as sync_router
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 
 app.include_router(bids_router)
+app.include_router(billing_router)
 app.include_router(ai_router)
 app.include_router(files_router)
 app.include_router(sync_router)
@@ -77,4 +79,3 @@ def meta() -> dict[str, str]:
 async def spa_fallback(path: str):
     """Serve SPA index.html for client-side routes (e.g. /login, /logout)."""
     return FileResponse(STATIC_DIR / "index.html")
-

@@ -4,12 +4,15 @@ import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from api.schemas.bids import GenerateBidRequest
-from api.services.agent import MODEL, TOOLS, client, handle_tool_call
+from api.services.agent import TOOLS, client, handle_tool_call
+from api.services.agent_access import AgentAccessError, enforce_agent_access
+from api.services.auth_guard import AuthContext, get_auth_context
+from api.services.agent_model_policy import resolve_agent_model_policy
 from api.services.bids import OUTPUT_DIR, preview_bid, read_json, resolve_project_path
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
@@ -27,12 +30,14 @@ class ChatRequest(BaseModel):
     trade: Optional[str] = "hvac"
 
 
-def _build_rich_context(project_id: str, trade: str) -> str:
+def _build_rich_context(project_id: str, trade: str, bidder_id: str) -> str:
     """Build a comprehensive project context string for LLM injection."""
     parts = []
+    project_authorized = False
 
     try:
-        path = resolve_project_path(project_id)
+        path = resolve_project_path(project_id, bidder_id=bidder_id)
+        project_authorized = True
         config = read_json(path)
         parts.append(f"**Project**: {config.get('name', project_id)}")
         parts.append(f"**Location**: {config.get('city', 'N/A')}, {config.get('state', 'N/A')}")
@@ -45,7 +50,7 @@ def _build_rich_context(project_id: str, trade: str) -> str:
 
     try:
         bid_request = GenerateBidRequest(project_id=project_id, trade=trade)
-        preview = preview_bid(bid_request)
+        preview = preview_bid(bid_request, bidder_id=bidder_id)
         parts.append("")
         parts.append("**Current Bid Snapshot:**")
         parts.append(f"  - Bidder: {preview.bidder_name}")
@@ -70,30 +75,31 @@ def _build_rich_context(project_id: str, trade: str) -> str:
     except Exception:
         parts.append("\n(Bid preview unavailable)")
 
-    try:
-        versions_dir = OUTPUT_DIR / project_id / trade / "versions"
-        index_path = versions_dir / "index.json"
-        if index_path.exists():
-            with index_path.open(encoding="utf-8-sig") as f:
-                index = json.load(f)
-            parts.append("")
-            parts.append("**Version History:**")
-            for entry in index[-5:]:
-                ts = entry.get("timestamp", "")[:19]
-                parts.append(f"  - {entry['version_id']} [{ts}] {entry.get('commit_message', '')}")
-    except Exception:
-        pass
+    if project_authorized:
+        try:
+            versions_dir = OUTPUT_DIR / project_id / trade / "versions"
+            index_path = versions_dir / "index.json"
+            if index_path.exists():
+                with index_path.open(encoding="utf-8-sig") as f:
+                    index = json.load(f)
+                parts.append("")
+                parts.append("**Version History:**")
+                for entry in index[-5:]:
+                    ts = entry.get("timestamp", "")[:19]
+                    parts.append(f"  - {entry['version_id']} [{ts}] {entry.get('commit_message', '')}")
+        except Exception:
+            pass
 
     return "\n".join(parts)
 
 
 async def agent_stream_generator(
-    messages: List[Dict[str, Any]], project_id: Optional[str], trade: str
+    messages: List[Dict[str, Any]], project_id: Optional[str], trade: str, bidder_id: str
 ):
     """Generator for streaming agent reasoning and tool calls via SSE."""
 
     if project_id and not any("PROJECT CONTEXT" in m.get("content", "") for m in messages):
-        context = _build_rich_context(project_id, trade)
+        context = _build_rich_context(project_id, trade, bidder_id=bidder_id)
         system_prompt = f"""You are an AI Estimator for VeloBid, a construction bid generation platform.
 
 PROJECT CONTEXT:
@@ -107,6 +113,8 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
 
     try:
         for i in range(max_iterations):
+            policy = resolve_agent_model_policy(messages, project_id, i)
+
             # Sanitize messages before sending to the API:
             # Strip reasoning_content (DeepSeek only valid in streaming output, rejected as input)
             sanitized_messages = []
@@ -121,13 +129,17 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
                 # reasoning_content intentionally omitted
                 sanitized_messages.append(sanitized)
 
-            response = client.chat.completions.create(
-                model=MODEL,
-                messages=sanitized_messages,
-                tools=TOOLS,
-                tool_choice="auto",
-                stream=True
-            )
+            request_kwargs: dict[str, Any] = {
+                "model": policy.model,
+                "messages": sanitized_messages,
+                "stream": True,
+                "max_tokens": policy.max_tokens,
+            }
+            if policy.allow_tools:
+                request_kwargs["tools"] = TOOLS
+                request_kwargs["tool_choice"] = "auto"
+
+            response = client.chat.completions.create(**request_kwargs)
 
             full_content = ""
             full_reasoning = ""
@@ -219,8 +231,20 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
 
 
 @router.post("/chat")
-async def agent_chat_stream(request: Request):
+async def agent_chat_stream(
+    request: Request,
+    auth: AuthContext = Depends(get_auth_context),
+):
     """Stream AI agent chat using SSE, with rich project context injection."""
+    try:
+        enforce_agent_access(auth.bidder_id, auth.user_id)
+    except AgentAccessError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=error.detail,
+            headers=error.headers,
+        ) from None
+
     body = await request.json()
 
     project_id = body.get("project_id")
@@ -237,6 +261,6 @@ async def agent_chat_stream(request: Request):
         messages.append(msg)
 
     return StreamingResponse(
-        agent_stream_generator(messages, project_id, trade),
+        agent_stream_generator(messages, project_id, trade, auth.bidder_id),
         media_type="text/event-stream",
     )

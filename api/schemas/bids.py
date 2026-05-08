@@ -89,6 +89,7 @@ class ProjectPricingResponse(BaseModel):
     total_bid: float = 0.0
     total_material: float = 0.0
     total_labor: float = 0.0
+    total_labor_hours: float = 0.0
     trade: str = "hvac"
     version_count: int = 0
     area_sf: float | None = None
@@ -106,3 +107,10 @@ class CreateProjectRequest(BaseModel):
     trade: str = "hvac"
     total_area_sf: float | None = None
     construction_type: str | None = None
+
+
+class BulkArchiveRequest(BaseModel):
+    """Request to archive or unarchive multiple projects at once."""
+
+    ids: list[str] = Field(..., examples=[["shalom_prayer_center", "office_building_a"]])
+    archived: bool = Field(..., examples=[True])

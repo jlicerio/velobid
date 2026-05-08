@@ -12,6 +12,10 @@ COPY bid_engine/ bid_engine/
 COPY config/ config/
 COPY generate_pdfs.py .
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -32,6 +32,7 @@ PROJECTS_DIR = CONFIG_DIR / "projects"
 TRADES_DIR = CONFIG_DIR / "trades"
 BID_PROJECTS_DIR = Path("/data/velobid/bids")
 OUTPUT_DIR = BID_PROJECTS_DIR / "api_generated"
+LEGACY_DEFAULT_BIDDER_ID = "air_hero"
 
 
 @contextmanager
@@ -51,14 +52,20 @@ def read_json(path: Path) -> dict:
         return json.load(file)
 
 
-def list_project_configs(show_archived: bool = False) -> list[ConfigSummary]:
+def list_project_configs(
+    show_archived: bool = False,
+    bidder_id: str | None = None,
+) -> list[ConfigSummary]:
     """Return available project JSON files for UI selection."""
     result = []
     for path in sorted(PROJECTS_DIR.glob("*.json")):
+        data = read_json(path)
+        if bidder_id and _project_owner_bidder_id(data) != bidder_id:
+            continue
+
         if show_archived:
             result.append(_summary_from_json_file(path))
         else:
-            data = read_json(path)
             if not data.get("archived", False):
                 result.append(_summary_from_json_file(path))
     return result
@@ -69,9 +76,12 @@ def list_trade_configs() -> list[ConfigSummary]:
     return [_summary_from_json_file(path) for path in sorted(TRADES_DIR.glob("*.json"))]
 
 
-def build_bid_for_request(request: GenerateBidRequest) -> Bid:
+def build_bid_for_request(
+    request: GenerateBidRequest,
+    bidder_id: str | None = None,
+) -> Bid:
     """Build a priced Bid object from a UI/API request."""
-    project_path = resolve_project_path(request.project_id)
+    project_path = resolve_project_path(request.project_id, bidder_id=bidder_id)
     trade_path = resolve_trade_path(request.trade)
 
     project_data = read_json(project_path)
@@ -88,15 +98,21 @@ def build_bid_for_request(request: GenerateBidRequest) -> Bid:
         )
 
 
-def preview_bid(request: GenerateBidRequest) -> BidPreviewResponse:
+def preview_bid(
+    request: GenerateBidRequest,
+    bidder_id: str | None = None,
+) -> BidPreviewResponse:
     """Build a bid and return UI-friendly summary data without rendering PDFs."""
-    bid = build_bid_for_request(request)
+    bid = build_bid_for_request(request, bidder_id=bidder_id)
     return serialize_bid_preview(bid, validate=request.run_validation)
 
 
-def generate_bid_files(request: GenerateBidRequest) -> GenerateBidResponse:
+def generate_bid_files(
+    request: GenerateBidRequest,
+    bidder_id: str | None = None,
+) -> GenerateBidResponse:
     """Generate PDFs through the existing generator and return links for the UI."""
-    project_path = resolve_project_path(request.project_id)
+    project_path = resolve_project_path(request.project_id, bidder_id=bidder_id)
     request_output_dir = OUTPUT_DIR / request.project_id / request.trade
     request_output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -111,17 +127,24 @@ def generate_bid_files(request: GenerateBidRequest) -> GenerateBidResponse:
             validate=request.run_validation,
         )
 
-    preview = preview_bid(request)
+    preview = preview_bid(request, bidder_id=bidder_id)
     files = [serialize_generated_file(Path(path)) for path in generated]
     return GenerateBidResponse(preview=preview, generated_files=files)
 
 
-def resolve_project_path(project_id: str) -> Path:
+def resolve_project_path(project_id: str, bidder_id: str | None = None) -> Path:
     """Resolve a safe project ID or file stem to a config path."""
     clean_id = Path(project_id).stem
     path = PROJECTS_DIR / f"{clean_id}.json"
     if not path.exists():
         raise FileNotFoundError(f"Project config not found: {clean_id}")
+
+    if bidder_id:
+        project_data = read_json(path)
+        if _project_owner_bidder_id(project_data) != bidder_id:
+            # Use a not-found error to avoid leaking that the project exists.
+            raise FileNotFoundError(f"Project config not found: {clean_id}")
+
     return path
 
 
@@ -181,10 +204,10 @@ _pricing_cache: dict = {}
 _PRICING_CACHE_TTL = 30  # seconds
 
 
-def list_projects_with_pricing() -> list[ProjectPricingResponse]:
+def list_projects_with_pricing(bidder_id: str | None = None) -> list[ProjectPricingResponse]:
     """Return every project with real pricing from preview_bid()."""
     now = time.time()
-    cache_key = "list_projects_with_pricing"
+    cache_key = f"list_projects_with_pricing::{bidder_id or 'all'}"
     cached = _pricing_cache.get(cache_key)
     if cached and (now - cached["ts"]) < _PRICING_CACHE_TTL:
         return cached["data"]
@@ -193,6 +216,8 @@ def list_projects_with_pricing() -> list[ProjectPricingResponse]:
     for path in sorted(PROJECTS_DIR.glob("*.json")):
         project_id = path.stem
         project_data = read_json(path)
+        if bidder_id and _project_owner_bidder_id(project_data) != bidder_id:
+            continue
 
         name = project_data.get("name") or project_id.replace("_", " ").title()
         city = project_data.get("city")
@@ -214,12 +239,14 @@ def list_projects_with_pricing() -> list[ProjectPricingResponse]:
         total_bid = 0.0
         total_material = 0.0
         total_labor = 0.0
+        total_labor_hours = 0.0
         try:
             req = GenerateBidRequest(project_id=project_id, trade="hvac", run_validation=False)
-            preview = preview_bid(req)
+            preview = preview_bid(req, bidder_id=bidder_id)
             total_bid = preview.totals.total_bid_amount
             total_material = preview.totals.total_material
             total_labor = preview.totals.total_labor
+            total_labor_hours = preview.totals.total_labor_hours
         except Exception:
             pass
 
@@ -230,6 +257,7 @@ def list_projects_with_pricing() -> list[ProjectPricingResponse]:
                 total_bid=total_bid,
                 total_material=total_material,
                 total_labor=total_labor,
+                total_labor_hours=total_labor_hours,
                 trade="hvac",
                 version_count=version_count,
                 area_sf=area_sf,
@@ -248,7 +276,7 @@ def _project_id_from_name(name: str) -> str:
     return re.sub(r"[^a-z0-9_]", "", name.lower().replace(" ", "_"))
 
 
-def create_project(request: CreateProjectRequest) -> ProjectPricingResponse:
+def create_project(request: CreateProjectRequest, bidder_id: str) -> ProjectPricingResponse:
     """Create a new project config and return its pricing summary."""
     project_id = _project_id_from_name(request.name)
 
@@ -262,6 +290,7 @@ def create_project(request: CreateProjectRequest) -> ProjectPricingResponse:
 
     project_config = {
         "name": request.name,
+        "bidder": bidder_id,
         "city": request.city,
         "state": request.state,
         "trade": request.trade,
@@ -289,12 +318,51 @@ def create_project(request: CreateProjectRequest) -> ProjectPricingResponse:
     )
 
 
-def archive_project(project_id: str, archived: bool = True) -> dict:
+def archive_project(
+    project_id: str,
+    archived: bool = True,
+    bidder_id: str | None = None,
+) -> dict:
     """Set the archived flag on a project config file."""
-    project_path = resolve_project_path(project_id)
+    project_path = resolve_project_path(project_id, bidder_id=bidder_id)
     data = read_json(project_path)
     data["archived"] = archived
     with project_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     status = "archived" if archived else "unarchived"
     return {"message": f"Project '{project_id}' {status} successfully", "archived": archived}
+
+
+def bulk_archive_project(
+    ids: list[str],
+    archived: bool = True,
+    bidder_id: str | None = None,
+) -> dict:
+    """Archive or unarchive multiple projects, skipping missing or unauthorized ones."""
+    processed: list[str] = []
+    skipped: list[str] = []
+    errors: list[str] = []
+    for project_id in ids:
+        try:
+            archive_project(project_id, archived=archived, bidder_id=bidder_id)
+            processed.append(project_id)
+        except FileNotFoundError:
+            skipped.append(project_id)
+        except Exception as exc:
+            errors.append(f"{project_id}: {exc}")
+    status = "archived" if archived else "unarchived"
+    return {
+        "message": f"Bulk {status} completed",
+        "processed": processed,
+        "skipped": skipped,
+        "errors": errors,
+        "archived": archived,
+    }
+
+
+def _project_owner_bidder_id(project_data: dict) -> str:
+    """Resolve the owning bidder for a project record."""
+    bidder = project_data.get("bidder")
+    if isinstance(bidder, str) and bidder.strip():
+        return bidder.strip()
+    return LEGACY_DEFAULT_BIDDER_ID

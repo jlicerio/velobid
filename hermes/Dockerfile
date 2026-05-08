@@ -28,6 +28,7 @@ COPY config/.env /root/.hermes/.env
 COPY auth.json /root/.hermes/auth.json
 
 EXPOSE 8642
+EXPOSE 8640
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["hermes", "gateway", "run"]

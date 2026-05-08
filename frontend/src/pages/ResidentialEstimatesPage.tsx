@@ -1,8 +1,27 @@
 import { useState } from "react";
-import { createEstimate } from "@/api/services/residential";
+import { Link } from "react-router-dom";
+import { createEstimate, type ResidentialEstimateResponse } from "@/api/services/residential";
+
+type EstimateFormState = {
+  customer_name: string;
+  customer_address: string;
+  customer_phone: string;
+  customer_email: string;
+  property_sqft: string;
+  scope_description: string;
+  equipment: { item: string; cost: number }[];
+  labor_tasks: { item: string; hours: number }[];
+  generate_pdf: boolean;
+};
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
 
 export function ResidentialEstimatesPage() {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<EstimateFormState>({
     customer_name: "",
     customer_address: "",
     customer_phone: "",
@@ -13,31 +32,41 @@ export function ResidentialEstimatesPage() {
     labor_tasks: [] as { item: string; hours: number }[],
     generate_pdf: true,
   });
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<ResidentialEstimateResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function updateField(
-    field: string,
-    value: string | boolean | { item: string; cost: number }[] | { item: string; hours: number }[]
-  ) {
+  function updateField<K extends keyof EstimateFormState>(field: K, value: EstimateFormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function formatCurrency(value: number | undefined) {
+    return currencyFormatter.format(value ?? 0);
+  }
+
+  function formatPercent(value: number | undefined) {
+    return `${((value ?? 0) * 100).toFixed(2)}%`;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     setResult(null);
+
+    const cleanedEquipment = form.equipment.filter((item) => item.item.trim().length > 0);
+    const cleanedLaborTasks = form.labor_tasks.filter((task) => task.item.trim().length > 0);
 
     const payload = {
       ...form,
       property_sqft: form.property_sqft ? parseFloat(form.property_sqft) : undefined,
-      equipment: form.equipment.length > 0 ? form.equipment : undefined,
-      labor_tasks: form.labor_tasks.length > 0 ? form.labor_tasks : undefined,
+      equipment: cleanedEquipment.length > 0 ? cleanedEquipment : undefined,
+      labor_tasks: cleanedLaborTasks.length > 0 ? cleanedLaborTasks : undefined,
     };
 
     try {
       const data = await createEstimate(payload);
-      setResult(JSON.stringify(data, null, 2));
+      setResult(data);
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -45,7 +74,7 @@ export function ResidentialEstimatesPage() {
           : typeof err === "object" && err !== null
             ? JSON.stringify(err)
             : String(err);
-      setResult("Error: " + message);
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -220,14 +249,143 @@ export function ResidentialEstimatesPage() {
         </button>
       </form>
 
+      {error && (
+        <div className="mt-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+          Error: {error}
+        </div>
+      )}
+
       {result && (
         <div className="mt-6">
-          {result.startsWith("Error:") ? (
-            <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
-              {result}
+          <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 mb-4">
+            <p className="text-sm font-semibold">Estimate created successfully</p>
+            <p className="text-sm mt-1">
+              Project <span className="font-semibold">{result.project_id}</span> for {result.customer_name} is ready.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border bg-card p-4">
+              <h2 className="text-base font-semibold mb-3">Summary</h2>
+              <dl className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Customer</dt>
+                  <dd className="font-medium text-right">{result.customer_name}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Project ID</dt>
+                  <dd className="font-medium text-right">{result.project_id}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Grand Total</dt>
+                  <dd className="font-semibold text-right">{formatCurrency(result.grand_total)}</dd>
+                </div>
+              </dl>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  to={`/projects/${result.project_id}`}
+                  className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
+                >
+                  Open Project
+                </Link>
+                {result.pdf_url ? (
+                  <a
+                    href={result.pdf_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-2 border rounded-lg text-sm font-medium hover:bg-accent"
+                  >
+                    Open Proposal PDF
+                  </a>
+                ) : (
+                  <span className="px-3 py-2 border rounded-lg text-sm text-muted-foreground">
+                    PDF not generated
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-lg border bg-card p-4">
+              <h2 className="text-base font-semibold mb-3">Pricing Breakdown</h2>
+              <dl className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Equipment</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.equipment_total)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Labor</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.labor_total)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Misc Materials</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.misc_materials)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Permit Fee</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.permit_fee)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Subtotal</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.subtotal)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Tax</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.tax)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Labor Hours</dt>
+                  <dd className="font-medium">{(result.totals.labor_hours ?? 0).toFixed(2)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Labor Rate</dt>
+                  <dd className="font-medium">{formatCurrency(result.totals.labor_rate)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Equipment Markup</dt>
+                  <dd className="font-medium">{(result.totals.equipment_markup_pct ?? 0).toFixed(2)}%</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Tax Rate</dt>
+                  <dd className="font-medium">{formatPercent(result.totals.tax_rate)}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t pt-2">
+                  <dt className="font-semibold">Grand Total</dt>
+                  <dd className="font-semibold">{formatCurrency(result.totals.grand_total ?? result.grand_total)}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          {result.line_items.length > 0 ? (
+            <div className="mt-4 rounded-lg border bg-card p-4">
+              <h2 className="text-base font-semibold mb-3">Line Items</h2>
+              <div className="space-y-3">
+                {result.line_items.map((item, index) => (
+                  <div key={`${item.type}-${item.description}-${index}`} className="rounded-md border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{item.description}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">{item.type}</p>
+                        {item.detail ? <p className="text-xs text-muted-foreground mt-1">{item.detail}</p> : null}
+                        {item.hours !== undefined && item.rate !== undefined ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {item.hours.toFixed(2)} hrs at {formatCurrency(item.rate)}/hr
+                          </p>
+                        ) : null}
+                        {item.cost !== undefined && item.markup !== undefined ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Base {formatCurrency(item.cost)} + markup {formatCurrency(item.markup)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="text-sm font-semibold shrink-0">{formatCurrency(item.total)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
-            <pre className="p-4 bg-muted rounded-lg text-xs overflow-auto max-h-96">{result}</pre>
+            <div className="mt-4 rounded-lg border bg-card p-4 text-sm text-muted-foreground">No line items returned.</div>
           )}
         </div>
       )}

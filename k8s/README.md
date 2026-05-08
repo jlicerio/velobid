@@ -93,7 +93,7 @@ kubectl get ingress -n velobid
 | Aspect | Docker Compose | K8s |
 |--------|---------------|-----|
 | **VeloBid** | Single container | Deployment (replicas: 1, HPA ready) |
-| **Hermes** | Single container | StatefulSet (needs stable identity) |
+| **Hermes** | Single container | Deployment (replicas: 1, profiles on PVC) |
 | **Storage** | Docker volumes | Longhorn PVCs |
 | **Config** | Env file + file mounts | ConfigMap + Secrets |
 | **Health** | Docker healthcheck | liveness + readiness probes |
@@ -121,4 +121,5 @@ kubectl autoscale deployment velobid -n velobid --cpu-percent=70 --min=1 --max=5
 
 - **Hermes is stateful** — profiles, sessions, memory live on PVC. Scale carefully.
 - **Shared-data PVC** must be ReadWriteMany (Longhorn supports this).
-- **Docker socket** is NOT mounted in K8s. The profile manager instead uses a direct API endpoint inside the Hermes container (not yet built).
+- **Docker socket** is NOT mounted in K8s. Profile management and SOUL.md reads go via the Hermes admin server on port 8640 (exposed as a ClusterIP service).
+- **Agent access controls** (trial, rate limits, model routing) and **Stripe billing** are configured through the `velobid-config` ConfigMap and `velobid-secrets` Secret. Set `STRIPE_ENABLED=true` only after configuring real Stripe keys and price IDs.

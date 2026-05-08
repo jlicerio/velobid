@@ -1,6 +1,7 @@
 export {
   fetchProjectsWithPricing,
   archiveProject,
+  bulkArchiveProjects,
 } from "./projects"
 export type { Project } from "./projects"
 
@@ -15,8 +16,20 @@ export type {
   PatchSettingsResponse,
 } from "./settings"
 
-export { fetchBidders, login } from "./auth"
+export { login } from "./auth"
 
 export { sendChatMessage } from "./chat"
 
 export { createEstimate } from "./residential"
+
+export {
+  fetchBillingStatus,
+  createCheckoutSession,
+  createPortalSession,
+} from "./billing"
+export type {
+  BillingStatus,
+  CheckoutSessionPayload,
+  CheckoutSessionResponse,
+  PortalSessionResponse,
+} from "./billing"

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useCallback } from "react"
 import type { ChatMessage, ChatSession } from "./types"
 import { sendChatMessage } from "@/api/services/chat"
+import { fetchProjectsWithPricing } from "@/api/services/projects"
 
 /* ─── State ─── */
 
@@ -107,6 +108,34 @@ function generateId() {
   return Math.random().toString(36).substring(2, 10)
 }
 
+async function buildProjectContext(projectId?: string | null): Promise<string | null> {
+  if (!projectId) return null
+
+  try {
+    const projects = await fetchProjectsWithPricing()
+    const project = projects.find((p) => p.id === projectId)
+    if (!project) return null
+
+    const lines = [
+      "PROJECT CONTEXT:",
+      `- Project: ${project.name}`,
+      `${project.city || project.state ? `- Location: ${project.city || ""}${project.city && project.state ? ", " : ""}${project.state || ""}` : ""}`.trim(),
+      `- Trade: ${project.trade || "unknown"}`,
+      project.total_bid != null ? `- Current bid total: $${project.total_bid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Current bid total: unavailable",
+      project.total_labor_hours != null ? `- Labor hours: ${project.total_labor_hours.toLocaleString()} hrs` : "- Labor hours: unavailable",
+      project.total_labor != null ? `- Labor cost: $${project.total_labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Labor cost: unavailable",
+      project.total_material != null ? `- Material cost: $${project.total_material.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Material cost: unavailable",
+      project.area_sf != null ? `- Area: ${project.area_sf.toLocaleString()} SF` : "- Area: unavailable",
+      "",
+      "Use the project context above when answering questions about the current bid, especially bid total, labor hours, material cost, and scope. If the user asks for the current bid total, answer with the current bid total. If they ask for labor hours, answer with the labor hours.",
+    ]
+
+    return lines.filter(Boolean).join("\n")
+  } catch {
+    return null
+  }
+}
+
 /* ─── Provider ─── */
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
@@ -161,9 +190,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "ADD_MESSAGE", sessionId, message: assistantMsg })
       dispatch({ type: "SET_STREAMING", value: true })
 
-      // Build messages array from session (exclude the empty assistant message we just added)
+      // Build messages from the current session history and include the new user message.
       const session = state.sessions[sessionId]
-      const historyMessages = session.messages.slice(0, -1).map((m) => ({
+      const priorMessages = session?.messages ?? []
+      const historyMessages = [...priorMessages, userMsg].map((m) => ({
         role: m.role === "system" ? "system" : m.role,
         content: m.content,
         ...(m.reasoningContent ? { reasoning_content: m.reasoningContent } : {}),
@@ -173,14 +203,40 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       abortControllerRef.current = abortController
 
       try {
+        const hasProjectContext = Boolean(session.projectId || state.projectId)
+        const projectContext = hasProjectContext
+          ? null
+          : await buildProjectContext(session.projectId || state.projectId || null)
+        const outboundMessages = projectContext
+          ? [{ role: "system", content: projectContext }, ...historyMessages]
+          : historyMessages
+
         const response = await sendChatMessage(
-          historyMessages,
+          outboundMessages,
           state.projectId || undefined,
           state.bidderId || undefined,
           abortController.signal,
         )
 
-        if (!response.ok) throw new Error(await response.text())
+        if (!response.ok) {
+          let message = `Request failed (${response.status})`
+          try {
+            const payload = await response.json()
+            const detail = payload?.detail
+            if (typeof detail === "string") {
+              message = detail
+            } else if (detail?.message) {
+              message = detail.message
+              if (detail.retry_after_seconds) {
+                message += ` Retry in ${detail.retry_after_seconds}s.`
+              }
+            }
+          } catch {
+            const fallback = await response.text()
+            if (fallback) message = fallback
+          }
+          throw new Error(message)
+        }
 
         const reader = response.body!.getReader()
         const decoder = new TextDecoder()
@@ -281,7 +337,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         abortControllerRef.current = null
       }
     },
-    [state.currentSessionId, state.projectId, state.sessions]
+    [state.currentSessionId, state.projectId, state.sessions, state.bidderId]
   )
 
   const stopStreaming = useCallback(() => {

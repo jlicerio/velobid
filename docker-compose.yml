@@ -34,6 +34,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8644:8642"
+      - "127.0.0.1:8640:8640"
     volumes:
       - hermes_data:/root/.hermes
       - shared_data:/data/velobid
@@ -42,10 +43,12 @@ services:
       - API_SERVER_HOST=0.0.0.0
       - API_SERVER_PORT=8642
       - API_SERVER_KEY=${HERMES_API_KEY:-velobid-internal}
+      - ADMIN_PORT=8640
       - HERMES_MODEL=deepseek-v4-flash
       - HERMES_PROVIDER=opencode-go
       - HERMES_BASE_URL=https://opencode.ai/zen/go/v1
-      - HERMES_CREDENTIALS=${HERMES_CREDENTIALS_JSON}
+      - OPENCODE_GO_API_KEY=${OPENCODE_GO_API_KEY}
+      - XAI_API_KEY=${XAI_API_KEY}
     depends_on:
       velobid:
         condition: service_healthy

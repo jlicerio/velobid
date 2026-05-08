@@ -4,13 +4,22 @@ export async function sendChatMessage(
   bidderId?: string,
   signal?: AbortSignal,
 ): Promise<Response> {
-  return fetch("/api/v1/agent/hermes-chat", {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const endpoint = projectId ? "/api/v1/agent/chat" : "/api/v1/agent/hermes-chat"
+
+  return fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       messages,
       project_id: projectId || undefined,
-      bidder_id: bidderId || "acme_hvac",
+      trade: "hvac",
+      bidder_id: bidderId || undefined,
     }),
     signal,
     credentials: "include",

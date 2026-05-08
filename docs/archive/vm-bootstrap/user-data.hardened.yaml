@@ -1,0 +1,93 @@
+#cloud-config
+# =============================================================================
+# VeloBid — Phase 1 VM Bootstrap: user-data.hardened.yaml
+# Purpose:  Cloud-init user-data for an Ubuntu 24.04 LTS VM.
+# Features: qemu-guest-agent, Docker CE, Tailscale (manual up), SSH hardening,
+#           UFW, fail2ban.
+# Secrets:  NONE. SSH public key must be inserted below before use.
+# =============================================================================
+
+hostname: velobid
+manage_etc_hosts: true
+
+# --- Datasource ---
+datasource_list: [NoCloud, ConfigDrive]
+
+# --- SSH access ---
+# IMPORTANT: Uncomment the ssh_authorized_keys block below and replace the
+# placeholder with YOUR public SSH key (e.g. from ~/.ssh/id_ed25519.pub).
+# Without a key here you will NOT be able to SSH into the VM after boot.
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: true
+    # ====================================================================
+    # REMOVE the comment markers on the next 3 lines and replace the key
+    # with your actual public SSH key:
+    # ====================================================================
+    ssh_authorized_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILORSD9vQ1ktUPX7ubUXHdW5tzMZGKiL9GYxKVrSE6gi juanclicerio@hotmail.com"
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDDV3QnTzVmtrSB8h7CM+qrF89X0I2lcN30+ob1AO+gv hermes-zed-access"
+
+# --- Package management ---
+package_update: true
+package_upgrade: false       # Avoid unexpected downtime; upgrade manually
+package_reboot_if_required: false
+
+packages:
+  # VM agent
+  - qemu-guest-agent
+  # General tools
+  - curl
+  - ca-certificates
+  - apt-transport-https
+  - software-properties-common
+  - gnupg
+  - lsb-release
+  - ufw
+  - fail2ban
+  - htop
+  - net-tools
+  - git
+  - jq
+
+# --- Post-boot provisioning ---
+runcmd:
+  # ---- Docker CE (official repo) ----
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update -qq
+  - apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - systemctl enable docker
+  - systemctl start docker
+
+  # ---- Tailscale (manual auth — no key embedded!) ----
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  # After first boot SSH in and run:
+  #   sudo tailscale up --ssh
+  # Do NOT automate this — auth keys would be plaintext in cloud-init.
+
+  # ---- SSH hardening ----
+  - sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+  - sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+  - sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+  - sed -i 's/^#PermitRootLogin without-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+  - sed -i 's/^PermitRootLogin yes/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+  - systemctl restart ssh
+
+  # ---- qemu-guest-agent ----
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+
+  # ---- UFW: deny incoming, allow SSH ----
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow ssh
+  - ufw --force enable
+
+  # ---- fail2ban ----
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+final_message: "Phase 1 bootstrap complete. VM is ready for manual Tailscale auth and VeloBid deployment."

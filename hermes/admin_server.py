@@ -34,38 +34,52 @@ def create_profile(body: dict) -> dict:
     company_name = body.get("company_name", "Unknown")
     trades = body.get("trades", [])
     company_context = body.get("company_context", "")
+    service_area = body.get("service_area", "Nationwide")
     pricing = body.get("pricing", {})
 
     if not bidder_id:
         return {"error": "bidder_id is required"}
 
     profile_name = f"bidder-{bidder_id}"
+    profile_dir = f"{HERMES_HOME}/profiles/{profile_name}"
+    template_dir = f"{HERMES_HOME}/profiles/bidder-velobid"
 
-    # 1. Create Hermes profile
-    _run(["hermes", "profile", "create", profile_name])
+    # Clone from template if available, otherwise create fresh
+    if os.path.isdir(template_dir) and bidder_id != "velobid":
+        _run(["cp", "-r", template_dir, profile_dir])
+        logger.info("Cloned profile %s from template", profile_name)
+    else:
+        _run(["hermes", "profile", "create", profile_name])
+        logger.info("Created fresh profile %s", profile_name)
 
-    # 2. Write SOUL.md
-    soul = f"""# {company_name}
+    # Customize SOUL.md — prepend bidder info to template
+    soul_header = f"""# {company_name}
 
 You are the AI estimating assistant for {company_name}.
-Specialties: {', '.join(trades)}
-Service area: {body.get('service_area', 'Nationwide')}
+Specialties: {', '.join(trades) if trades else 'General Contracting'}
+Service area: {service_area}
 
 ## Company Context
 {company_context}
 
-## Communication Style
-- Professional, precise construction estimating language
-- Always cite specific line items and costs
-- Flag exclusions and assumptions clearly
-- Respond in the same language the user writes in
 """
-    with open(f"{HERMES_HOME}/profiles/{profile_name}/SOUL.md", "w") as f:
-        f.write(soul)
+    soul_path = f"{profile_dir}/SOUL.md"
+    existing = ""
+    if os.path.exists(soul_path):
+        with open(soul_path) as f:
+            existing = f.read()
+        # Skip header if already has a # heading
+        if existing.startswith("# "):
+            # Replace first heading with bidder-specific header
+            parts = existing.split("\n", 1)
+            existing = parts[1] if len(parts) > 1 else ""
 
-    # 3. Write pricing skill
-    skill_dir = f"{HERMES_HOME}/profiles/{profile_name}/skills/bidder-pricing"
-    os.makedirs(skill_dir, exist_ok=True)
+    with open(soul_path, "w") as f:
+        f.write(soul_header + existing)
+
+    # Upsert pricing skill (replaces template defaults with bidder-specific rates)
+    pricing_dir = f"{profile_dir}/skills/bidder-pricing"
+    os.makedirs(pricing_dir, exist_ok=True)
     pricing_skill = f"""---
 name: {profile_name}-pricing
 description: Pricing defaults for {company_name}
@@ -78,11 +92,11 @@ description: Pricing defaults for {company_name}
 - Contingency: {pricing.get('contingency_pct', 5.0)}%
 - Tax rate: {pricing.get('tax_rate', 0.0825)}
 """
-    with open(f"{skill_dir}/SKILL.md", "w") as f:
+    with open(f"{pricing_dir}/SKILL.md", "w") as f:
         f.write(pricing_skill)
 
-    # 4. Write file management skill
-    fm_dir = f"{HERMES_HOME}/profiles/{profile_name}/skills/file-mgmt"
+    # Upsert file management skill
+    fm_dir = f"{profile_dir}/skills/file-mgmt"
     os.makedirs(fm_dir, exist_ok=True)
     fm_skill = f"""---
 name: {profile_name}-file-mgmt
@@ -97,14 +111,16 @@ description: File locations for {company_name}
     with open(f"{fm_dir}/SKILL.md", "w") as f:
         f.write(fm_skill)
 
-    # 5. Copy auth.json
+    # Copy auth.json from parent (or template if parent missing)
     auth_src = f"{HERMES_HOME}/auth.json"
-    auth_dst = f"{HERMES_HOME}/profiles/{profile_name}/auth.json"
+    auth_dst = f"{profile_dir}/auth.json"
     if os.path.exists(auth_src):
         _run(["cp", auth_src, auth_dst])
+    elif os.path.exists(f"{template_dir}/auth.json"):
+        _run(["cp", f"{template_dir}/auth.json", auth_dst])
 
-    logger.info("Created profile %s for %s", profile_name, company_name)
-    return {"profile_name": profile_name, "status": "created"}
+    logger.info("Created profile %s for %s (trades: %s)", profile_name, company_name, trades)
+    return {"profile_name": profile_name, "status": "created", "source": "template" if bidder_id != "velobid" else "fresh"}
 
 
 class AdminHandler(BaseHTTPRequestHandler):
@@ -117,6 +133,13 @@ class AdminHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/admin/health":
             self._json({"status": "ok"})
+        elif self.path == "/admin/profiles":
+            profiles_dir = f"{HERMES_HOME}/profiles"
+            if os.path.isdir(profiles_dir):
+                profiles = sorted(os.listdir(profiles_dir))
+            else:
+                profiles = []
+            self._json({"profiles": profiles})
         elif self.path.startswith("/admin/profiles/") and self.path.endswith("/soul"):
             profile_name = self.path.split("/")[3]
             soul_path = f"{HERMES_HOME}/profiles/{profile_name}/SOUL.md"

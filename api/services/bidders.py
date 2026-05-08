@@ -56,6 +56,8 @@ def list_bidder_groups() -> list[BidderGroupSummary]:
 
         try:
             data = read_json(bidder_file)
+            if _is_template_bidder_profile(dir_path.name, data):
+                continue
             users = _load_users(dir_path)
             results.append(
                 BidderGroupSummary(
@@ -67,6 +69,28 @@ def list_bidder_groups() -> list[BidderGroupSummary]:
         except Exception:
             continue
     return results
+
+
+def _is_template_bidder_profile(bidder_id: str, bidder_data: dict) -> bool:
+    """Return True when a bidder profile is a template/example placeholder."""
+    normalized_id = bidder_id.strip().lower()
+    if normalized_id in {"template", "template_example", "example", "demo"}:
+        return True
+    if normalized_id.startswith("template_"):
+        return True
+
+    if bidder_data.get("is_template") is True:
+        return True
+
+    company_name = str(bidder_data.get("company_name", "")).strip().lower()
+    if company_name == "your company name":
+        return True
+
+    comment = str(bidder_data.get("_comment", "")).strip().lower()
+    if "template for adding new bidder profiles" in comment:
+        return True
+
+    return False
 
 
 def get_bidder_group(bidder_id: str) -> Optional[dict]:
@@ -336,6 +360,45 @@ def authenticate_user(bidder_id: str, user_id: str, password: str) -> Optional[d
                     return user_dict
             return None
     return None
+
+
+def authenticate_user_any_bidder(
+    user_id: str,
+    password: str,
+) -> Optional[tuple[str, dict]]:
+    """Authenticate by user ID across bidders.
+
+    Returns `(bidder_id, user_dict)` on a single match, `None` on no match.
+    Raises `ValueError` when the same user ID/password pair matches multiple bidders.
+    """
+    matches: list[tuple[str, dict]] = []
+
+    for bidder_dir in sorted(BIDDERS_DIR.iterdir()):
+        if not bidder_dir.is_dir():
+            continue
+        bidder_file = bidder_dir / "bidder.json"
+        if not bidder_file.exists():
+            continue
+
+        try:
+            bidder_data = read_json(bidder_file)
+        except Exception:
+            continue
+        if _is_template_bidder_profile(bidder_dir.name, bidder_data):
+            continue
+
+        user = authenticate_user(bidder_dir.name, user_id, password)
+        if user:
+            matches.append((bidder_dir.name, user))
+
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        return None
+
+    raise ValueError(
+        "User ID is assigned to multiple companies. Please contact an admin to use a unique user ID."
+    )
 
 
 def _get_raw_user(bidder_dir: Path, user_id: str) -> Optional[dict]:

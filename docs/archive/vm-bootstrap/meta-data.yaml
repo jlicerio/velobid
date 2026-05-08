@@ -1,0 +1,7 @@
+#cloud-config
+# =============================================================================
+# VeloBid — Phase 1 VM Bootstrap: meta-data.yaml
+# Purpose:  Cloud-init metadata — instance identity for the VM.
+# =============================================================================
+instance-id: velobid-phase1-001
+local-hostname: velobid

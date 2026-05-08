@@ -2,21 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { LineItemsTable } from "@/features/bids/LineItemsTable";
 import type { BidPreviewResponse, GeneratedFileResponse } from "@/types/bids";
+import type { Project } from "@/api/services/projects";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchProjectsWithPricing } from "@/api/services/projects";
 import { previewBid, generateBid } from "@/api/services/bids";
-
-interface Project {
-  id: string;
-  name: string;
-  location?: string;
-  area_sf?: number;
-  trade?: string;
-  archived?: boolean;
-  city?: string;
-  state?: string;
-}
+import { toast } from "sonner";
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -44,8 +35,8 @@ export function ProjectDetailPage() {
       const found = all.find((p) => p.id === projectId);
       if (found) setProject(found);
       else setError("Project not found");
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load project");
     } finally {
       setLoading(false);
     }
@@ -58,9 +49,9 @@ export function ProjectDetailPage() {
     try {
       const data = await previewBid(projectId, trade);
       setPreview(data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setPreview(null);
-      alert(`Preview failed: ${e.message}`);
+      toast.error(`Preview failed: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
       setPreviewLoading(false);
     }
@@ -74,8 +65,8 @@ export function ProjectDetailPage() {
       if (data.generated_files) {
         setBidResults((prev) => [...prev, ...data.generated_files]);
       }
-    } catch (e: any) {
-      alert(`Generate failed: ${e.message}`);
+    } catch (e: unknown) {
+      toast.error(`Generate failed: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
       setGenerating(false);
     }
@@ -263,10 +254,9 @@ export function ProjectDetailPage() {
           )}
 
           {activeTab === "bids" && (
-            <div className="text-center text-muted-foreground py-12 space-y-3">
-              <p>Coming soon — bid versions and document viewer are under development.</p>
-              {bidResults.length > 0 && (
-                <div className="max-w-md mx-auto text-left space-y-2">
+            <div className="py-6 space-y-4">
+              {bidResults.length > 0 ? (
+                <div className="max-w-md text-left space-y-2">
                   <h3 className="font-medium text-sm">Generated Files</h3>
                   {bidResults.map((r, i) => (
                     <div key={i} className="text-sm border rounded-lg p-3 flex items-center justify-between">
@@ -275,7 +265,14 @@ export function ProjectDetailPage() {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>No bids generated yet. Go to the Overview tab, select a trade, and generate a bid.</p>
+                </div>
               )}
+              <div className="text-center text-muted-foreground pt-4 border-t">
+                <p className="text-xs">Bid versioning and advanced document viewer are under development.</p>
+              </div>
             </div>
           )}
 

@@ -10,6 +10,7 @@ data:
   API_SERVER_ENABLED: "true"
   API_SERVER_HOST: "0.0.0.0"
   API_SERVER_PORT: "8642"
+  ADMIN_PORT: "8640"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -20,3 +21,31 @@ data:
   HERMES_CONTAINER: "hermes"
   HERMES_URL: "http://hermes:8642"
   HERMES_API_KEY: "velobid-internal"
+  HERMES_ADMIN_URL: "http://hermes:8640"
+  # Agent access controls (trial + rate limiting)
+  AGENT_TRIAL_DAYS: "14"
+  AGENT_RATE_LIMIT_COMPANY_PER_MINUTE: "30"
+  AGENT_RATE_LIMIT_COMPANY_PER_HOUR: "600"
+  AGENT_RATE_LIMIT_COMPANY_PER_DAY: "5000"
+  AGENT_RATE_LIMIT_USER_PER_MINUTE: "12"
+  AGENT_RATE_LIMIT_USER_PER_HOUR: "240"
+  # Cost-aware model routing
+  AGENT_MODEL_ROUTING_ENABLED: "true"
+  AGENT_MODEL_FAST: "deepseek-v4-flash"
+  DEEPSEEK_MODEL: "deepseek-v4-pro"
+  AGENT_MODEL_FORCE_DEEP: "false"
+  AGENT_MAX_TOKENS_FAST: "900"
+  AGENT_MAX_TOKENS_DEEP: "2200"
+  AGENT_ALLOW_TOOLS_ON_LOW_COMPLEXITY: "false"
+  # Stripe billing (safe defaults; secrets live in velobid-secrets)
+  STRIPE_ENABLED: "false"
+  APP_BASE_URL: "https://velobid.tailfceaca.ts.net"
+  STRIPE_CHECKOUT_SUCCESS_URL: "https://velobid.tailfceaca.ts.net/settings/billing?checkout=success"
+  STRIPE_CHECKOUT_CANCEL_URL: "https://velobid.tailfceaca.ts.net/settings/billing?checkout=canceled"
+  STRIPE_PORTAL_RETURN_URL: "https://velobid.tailfceaca.ts.net/settings/billing"
+  STRIPE_WEBHOOK_PATH: "/api/v1/billing/stripe/webhook"
+  # Stripe price IDs (non-sensitive, but replace with real values before enabling billing)
+  STRIPE_PRICE_ID: "price_replace_me"
+  STRIPE_PRICE_ID_STARTER: "price_replace_me"
+  STRIPE_PRICE_ID_PRO: "price_replace_me"
+  STRIPE_PRICE_ID_ENTERPRISE: "price_replace_me"

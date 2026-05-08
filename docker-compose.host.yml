@@ -1,0 +1,64 @@
+services:
+  velobid:
+    build: .
+    image: velobid-api:local
+    container_name: velobid
+    restart: unless-stopped
+    ports:
+      - "${VELOBID_BIND_ADDR:-0.0.0.0}:${VELOBID_PORT:-8000}:8000"
+    volumes:
+      - ${VELOBID_CONFIG_DIR:-/srv/velobid/config}:/app/config
+      - ${VELOBID_PROJECTS_DIR:-/srv/velobid/bid_projects}:/app/bid_projects
+      - ${VELOBID_DATA_DIR:-/srv/velobid/data}:/data/velobid
+      - ${VELOBID_ENV_FILE:-/srv/velobid/secrets/velobid.env}:/app/.env:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/meta"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "${VELOBID_CPU_LIMIT:-2}"
+          memory: "${VELOBID_MEMORY_LIMIT:-2G}"
+        reservations:
+          cpus: "${VELOBID_CPU_RESERVATION:-0.5}"
+          memory: "${VELOBID_MEMORY_RESERVATION:-512M}"
+
+  hermes:
+    build: ./hermes
+    image: velobid-hermes:local
+    container_name: hermes
+    restart: unless-stopped
+    ports:
+      - "${HERMES_BIND_ADDR:-127.0.0.1}:${HERMES_PORT:-8644}:8642"
+    volumes:
+      - ${HERMES_STATE_DIR:-/srv/velobid/hermes}:/root/.hermes
+      - ${VELOBID_DATA_DIR:-/srv/velobid/data}:/data/velobid
+    environment:
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_PORT=8642
+      - API_SERVER_KEY=${HERMES_API_KEY:-velobid-internal}
+      - HERMES_MODEL=${HERMES_MODEL:-deepseek-v4-flash}
+      - HERMES_PROVIDER=${HERMES_PROVIDER:-opencode-go}
+      - HERMES_BASE_URL=${HERMES_BASE_URL:-https://opencode.ai/zen/go/v1}
+      - HERMES_CREDENTIALS=${HERMES_CREDENTIALS_JSON}
+    depends_on:
+      velobid:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "Authorization: Bearer ${HERMES_API_KEY:-velobid-internal}", "http://localhost:8642/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "${HERMES_CPU_LIMIT:-2}"
+          memory: "${HERMES_MEMORY_LIMIT:-4G}"
+        reservations:
+          cpus: "${HERMES_CPU_RESERVATION:-0.5}"
+          memory: "${HERMES_MEMORY_RESERVATION:-1G}"

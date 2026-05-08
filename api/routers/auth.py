@@ -13,6 +13,7 @@ from api.schemas.bidders import (
 )
 from api.services.bidders import (
     authenticate_user,
+    authenticate_user_any_bidder,
     create_token,
     get_bidder_group,
     get_bidder_name,
@@ -27,19 +28,32 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 @router.post("/login", response_model=LoginResponse)
 def login(request: LoginRequest):
     """Authenticate a user and return a JWT token."""
-    user = authenticate_user(request.bidder_id, request.user_id, request.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    resolved_bidder_id = request.bidder_id
+    user = None
 
-    bidder_name = get_bidder_name(request.bidder_id)
+    if resolved_bidder_id:
+        user = authenticate_user(resolved_bidder_id, request.user_id, request.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    else:
+        try:
+            resolved = authenticate_user_any_bidder(request.user_id, request.password)
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+        if not resolved:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        resolved_bidder_id, user = resolved
+
+    bidder_name = get_bidder_name(resolved_bidder_id)
 
     # Auto-create Hermes profile if it doesn't exist yet (lazy on first login)
     try:
-        group = get_bidder_group(request.bidder_id)
+        group = get_bidder_group(resolved_bidder_id)
         if group:
             trades = [group.get("trade_domain", "General").lower().replace(" / ", ",")]
             create_bidder_profile(
-                bidder_id=request.bidder_id,
+                bidder_id=resolved_bidder_id,
                 company_name=group.get("company_name", bidder_name),
                 trades=trades,
                 company_context=f"Location: {group.get('location', '')}. Region: {group.get('operating_region', '')}.",
@@ -48,7 +62,7 @@ def login(request: LoginRequest):
     except Exception:
         pass  # Non-critical — chat will still work, just without profile context
 
-    token = create_token(request.bidder_id, request.user_id)
+    token = create_token(resolved_bidder_id, request.user_id)
 
     return LoginResponse(
         token=token,
@@ -58,7 +72,7 @@ def login(request: LoginRequest):
             role=user.get("role", ""),
             email=user.get("email"),
         ),
-        bidder_id=request.bidder_id,
+        bidder_id=resolved_bidder_id,
         bidder_name=bidder_name,
     )
 

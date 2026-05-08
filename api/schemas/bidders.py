@@ -104,7 +104,11 @@ class ChatRequestWithSession(BaseModel):
 class LoginRequest(BaseModel):
     """User login credentials."""
 
-    bidder_id: str = Field(..., examples=["air_hero"])
+    bidder_id: str | None = Field(
+        default=None,
+        examples=["air_hero"],
+        description="Optional company identifier. If omitted, login resolves by user_id + password.",
+    )
     user_id: str = Field(..., examples=["jose"])
     password: str = Field(..., examples=["airhero2024"])
 

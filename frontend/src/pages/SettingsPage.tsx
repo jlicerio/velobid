@@ -23,8 +23,10 @@ export function SettingsPage() {
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [agent, setAgent] = useState<AgentSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     fetchSettings()
@@ -34,11 +36,14 @@ export function SettingsPage() {
         setAgent(d.agent);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        setFetchError(true);
+      });
   }, []);
 
   const patch = useCallback(async (section: string, key: string, value: any) => {
-    // Optimistic local update
+    setDirty(true);
     if (section === "company") setCompany((p) => p ? { ...p, [key]: value } : p);
     else if (section === "pricing") setPricing((p) => p ? { ...p, [key]: value } : p);
     else if (section === "agent") setAgent((p) => p ? { ...p, [key]: value } : p);
@@ -57,13 +62,24 @@ export function SettingsPage() {
       setPricing(data.settings.pricing);
       setAgent(data.settings.agent);
       setMsg({ type: "success", text: "Settings saved" });
+      setDirty(false);
       setTimeout(() => setMsg(null), 3000);
-    } catch (e: any) {
-      setMsg({ type: "error", text: `Save failed: ${e.message}` });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Save failed";
+      setMsg({ type: "error", text: `Save failed: ${message}` });
     } finally {
       setSaving(false);
     }
   }, [company, pricing, agent]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -81,11 +97,23 @@ export function SettingsPage() {
               {msg.text}
             </span>
           )}
+          {dirty && !msg && (
+            <span className="text-xs text-yellow-600 bg-yellow-50 dark:bg-yellow-950/20 px-2 py-1 rounded">
+              Unsaved changes
+            </span>
+          )}
           <Button onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save Settings"}
           </Button>
         </div>
       </div>
+
+      {fetchError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          Failed to load settings. The server may be unavailable or the request timed out.
+          <button onClick={() => { setFetchError(false); setLoading(true); fetchSettings().then(d => { setCompany(d.company); setPricing(d.pricing); setAgent(d.agent); setLoading(false); }).catch(() => { setLoading(false); setFetchError(true); }); }} className="ml-3 underline hover:no-underline">Retry</button>
+        </div>
+      )}
 
       {/* Company */}
       <Card>

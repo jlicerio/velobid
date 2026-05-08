@@ -1,0 +1,20 @@
+# =============================================================================
+# VeloBid — Phase 1 VM Bootstrap: network-config.yaml
+# Purpose:  Cloud-init network config — DHCP on virtio NIC.
+# Notes:    Ubuntu cloud images name the first virtio interface `ens3` or
+#           `enp1s0` depending on firmware/bus.  The match rule below catches
+#           any virtio_net device regardless of kernel name.
+# =============================================================================
+version: 2
+ethernets:
+  id0:
+    match:
+      name: "e*"
+    dhcp4: true
+    dhcp6: false
+    optional: true
+    # Optional: set a custom MTU
+    # mtu: 1500
+    # Optional: static DNS
+    # nameservers:
+    #   addresses: [1.1.1.1, 8.8.8.8]
