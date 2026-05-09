@@ -104,11 +104,6 @@ export function ProjectDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold">{project.name}</h1>
             <ProjectStatusBadge status={project.status} archived={project.archived} />
-            {project.archived && (
-              <Badge variant="secondary" className="rounded-full">
-                Archived
-              </Badge>
-            )}
           </div>
           {(project.city || project.state) && (
             <p className="text-sm text-muted-foreground">{project.city}{project.city && project.state ? ", " : ""}{project.state}</p>

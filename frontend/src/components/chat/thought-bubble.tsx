@@ -29,7 +29,7 @@ export function ThoughtBubble({ content, className }: ThoughtBubbleProps) {
           )}
         />
         <Lightbulb className="h-3 w-3" />
-        <span>Thinking process</span>
+        <span>Thinking</span>
       </summary>
       <div className="border-t border-primary/10 px-3 py-2 text-muted-foreground leading-relaxed whitespace-pre-wrap">
         {content}

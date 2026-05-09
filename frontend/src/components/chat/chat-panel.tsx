@@ -5,7 +5,6 @@ import { MessageList } from "./message-list"
 import { MessageInput } from "./message-input"
 import { SuggestionChips } from "./suggestion-chips"
 import { DashboardSnapshotCard } from "./dashboard-snapshot"
-import { Bot } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ChatPanelProps {
@@ -47,10 +46,8 @@ export function ChatPanel({ className }: ChatPanelProps) {
       {/* Main chat area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-          <Bot className="h-5 w-5" />
-          <span className="text-sm font-medium">AI Assistant</span>
-          <span className="ml-auto text-xs text-muted-foreground">
+        <div className="flex items-center border-b border-border px-4 py-2">
+          <span className="text-xs text-muted-foreground">
             {currentSession?.projectId ? `Project: ${currentSession.projectId}` : "Portfolio overview"}
           </span>
         </div>

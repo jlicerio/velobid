@@ -1,9 +1,7 @@
 import { cn } from "@/lib/utils"
-import { Bot, User, Volume2, AlertCircle } from "lucide-react"
+import { Bot, User, AlertCircle } from "lucide-react"
 import { ThoughtBubble } from "./thought-bubble"
 import { MarkdownContent } from "./markdown-content"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ChatMessage } from "@/lib/types"
 
 interface ChatMessageProps {
@@ -16,24 +14,13 @@ export function ChatMessageView({ message, isStreaming }: ChatMessageProps) {
   const isSystem = message.role === "system"
   const isAssistant = message.role === "assistant"
 
-  const handleTTS = (text: string) => {
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 1.0
-      utterance.pitch = 1.0
-      speechSynthesis.speak(utterance)
-    }
-  }
-
   if (isSystem) {
     return (
       <details className="px-4 py-2">
         <summary className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>System context</span>
-          <span className="ml-auto text-[10px] uppercase tracking-[0.2em]">
-            Hidden by default
-          </span>
+
         </summary>
         <div className="mt-2 rounded-xl border border-border/70 bg-card/80 px-3 py-2 text-muted-foreground">
           <MarkdownContent
@@ -99,9 +86,6 @@ export function ChatMessageView({ message, isStreaming }: ChatMessageProps) {
                     <span className="rounded-full bg-background px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-foreground">
                       {tc.name}
                     </span>
-                    <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                      Tool call
-                    </span>
                   </div>
                   {tc.result && (
                     <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
@@ -114,24 +98,7 @@ export function ChatMessageView({ message, isStreaming }: ChatMessageProps) {
           )}
         </div>
 
-        {/* Actions bar */}
-        {isAssistant && message.content && (
-          <div className="flex gap-1 px-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground"
-                  onClick={() => handleTTS(message.content)}
-                >
-                  <Volume2 className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Read aloud</TooltipContent>
-            </Tooltip>
-          </div>
-        )}
+
       </div>
     </div>
   )

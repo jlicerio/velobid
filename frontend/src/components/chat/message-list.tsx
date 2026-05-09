@@ -29,10 +29,13 @@ export function MessageList() {
       <div className="m-3 flex flex-1 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/70 bg-card/60 px-6 py-10 text-center text-muted-foreground">
         <MessageSquare className="h-12 w-12 opacity-20" />
         <p className="text-sm font-medium text-foreground">
-          Start a conversation with the AI assistant
+          Start a conversation
         </p>
         <p className="max-w-sm text-xs leading-relaxed">
-          Ask about project pricing, materials, labor hours, or have it generate a bid summary.
+          Ask about pricing, materials, labor hours, or bid summaries.
+        </p>
+        <p className="max-w-sm text-xs leading-relaxed">
+          Ask about pricing, materials, labor hours, or bid summaries.
         </p>
       </div>
     )

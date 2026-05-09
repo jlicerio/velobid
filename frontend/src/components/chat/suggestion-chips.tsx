@@ -1,14 +1,6 @@
 import { useChat } from "@/lib/chat-store"
 import { Button } from "@/components/ui/button"
 
-const GENERAL_SUGGESTIONS = [
-  "What's the current bid total?",
-  "Show me the line items",
-  "Update material cost by 5%",
-  "Generate the bid package",
-  "Compare with previous version",
-]
-
 const PROJECT_SUGGESTIONS = [
   "What's the current bid total for this project?",
   "How many labor hours are on this project?",
@@ -32,11 +24,9 @@ interface SuggestionChipsProps {
 export function SuggestionChips({ onSelect }: SuggestionChipsProps) {
   const { currentSession, state } = useChat()
   const hasMessages = (currentSession?.messages.length ?? 0) > 0
-  const suggestions = currentSession
-    ? currentSession.projectId
-      ? PROJECT_SUGGESTIONS
-      : DASHBOARD_SUGGESTIONS
-    : GENERAL_SUGGESTIONS
+  const suggestions = currentSession?.projectId
+    ? PROJECT_SUGGESTIONS
+    : DASHBOARD_SUGGESTIONS
 
   // Only show suggestions when no messages yet (and not streaming)
   if (hasMessages || state.isStreaming) return null

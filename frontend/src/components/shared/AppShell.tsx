@@ -151,8 +151,7 @@ export function AppShell() {
               ←
             </button>
           )}
-          <span className="text-base">💬</span>
-          <span className="text-sm font-semibold">AI Assistant</span>
+          <span className="text-sm font-semibold">Assistant</span>
           {currentProjectId && (
             <span className="ml-auto text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full truncate max-w-[120px]">
               {currentProjectId}
@@ -213,9 +212,6 @@ export function AppShell() {
               ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <span className="hidden md:inline-flex text-xs text-muted-foreground">
-              {currentProjectId ? "Project view" : "Dashboard"}
-            </span>
             <button
               onClick={logout}
               className="text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded hover:bg-destructive/10"
