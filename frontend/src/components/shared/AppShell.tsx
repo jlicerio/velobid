@@ -151,7 +151,7 @@ export function AppShell() {
               ←
             </button>
           )}
-          <span className="text-sm font-semibold">Assistant</span>
+          <span className="text-sm font-semibold tracking-tight text-primary">VeloBid</span>
           {currentProjectId && (
             <span className="ml-auto text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full truncate max-w-[120px]">
               {currentProjectId}

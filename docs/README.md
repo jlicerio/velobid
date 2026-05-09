@@ -11,6 +11,7 @@ Docs you should read first for current operations.
 | File | Purpose |
 |------|---------|
 | [runbook-linux-no-vm.md](runbook-linux-no-vm.md) | **Primary deployment runbook.** Linux host Docker Compose path using `docker-compose.host.yml`, `/srv/velobid` storage, and `scripts/linux-host-*.sh`. |
+| [agent-orientation.md](agent-orientation.md) | Quick map for agents: live host, deploy path, key UI files, and verification checklist. |
 | [stripe-billing-runbook.md](stripe-billing-runbook.md) | Configure Stripe Checkout, Customer Portal, webhook signing, and production env values for billing. |
 | [kaban-opencode-run-report-2026-05-08.md](kaban-opencode-run-report-2026-05-08.md) | Run report for Kaban automation completion, loop hardening, and Linux host Docker redeploy on 2026-05-08. |
 

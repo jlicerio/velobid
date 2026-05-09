@@ -12,6 +12,11 @@ The active deployment path is **Linux host Docker directly**.
   - Managed by `scripts/linux-host-*.sh` (init, deploy, backup, restore)
   - Hermes runs containerized alongside VeloBid
 
+- **Agent orientation:** `docs/agent-orientation.md`
+  - Short map for workers and operators
+  - Points to the live host, current deploy path, and key UI files
+  - Helps agents find the right source of truth quickly
+
 - **Architecture docs:** `docs/architecture.md` and `docs/hermes-multi-tenant-architecture.md` describe the running system and future multi-tenant design.
 
 - **QA docs:** `docs/qa-ui-audit-notes-2026-05-06.md` and `docs/release-qa-checklist-2026-05-06.md` reflect the most recent QA pass.

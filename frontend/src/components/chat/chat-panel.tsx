@@ -45,13 +45,6 @@ export function ChatPanel({ className }: ChatPanelProps) {
 
       {/* Main chat area */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Header */}
-        <div className="flex items-center border-b border-border px-4 py-2">
-          <span className="text-xs text-muted-foreground">
-            {currentSession?.projectId ? `Project: ${currentSession.projectId}` : "Portfolio overview"}
-          </span>
-        </div>
-
         {!currentSession?.projectId && state.dashboardSnapshot && (
           <DashboardSnapshotCard snapshot={state.dashboardSnapshot} />
         )}

@@ -34,9 +34,6 @@ export function MessageList() {
         <p className="max-w-sm text-xs leading-relaxed">
           Ask about pricing, materials, labor hours, or bid summaries.
         </p>
-        <p className="max-w-sm text-xs leading-relaxed">
-          Ask about pricing, materials, labor hours, or bid summaries.
-        </p>
       </div>
     )
   }
