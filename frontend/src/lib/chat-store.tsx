@@ -1,16 +1,22 @@
-import React, { createContext, useContext, useReducer, useCallback } from "react"
-import type { ChatMessage, ChatSession } from "./types"
-import { sendChatMessage } from "@/api/services/chat"
-import { fetchProjectsWithPricing } from "@/api/services/projects"
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useCallback,
+} from "react";
+import type { ChatMessage, ChatSession } from "./types";
+import { sendChatMessage } from "@/api/services/chat";
+import { fetchProjectsWithPricing } from "@/api/services/projects";
 
 /* ─── State ─── */
 
 interface ChatState {
-  sessions: Record<string, ChatSession>
-  currentSessionId: string | null
-  isStreaming: boolean
-  projectId: string | null
-  bidderId: string | null
+  sessions: Record<string, ChatSession>;
+  currentSessionId: string | null;
+  isStreaming: boolean;
+  projectId: string | null;
+  bidderId: string | null;
+  dashboardVersion: number;
 }
 
 type Action =
@@ -19,120 +25,165 @@ type Action =
   | { type: "SET_SESSION"; id: string }
   | { type: "SET_PROJECT"; id: string }
   | { type: "ADD_MESSAGE"; sessionId: string; message: ChatMessage }
-  | { type: "UPDATE_LAST_MESSAGE"; sessionId: string; content: string; reasoningContent?: string }
-  | { type: "ADD_TOOL_CALL"; sessionId: string; call: { name: string; result?: string } }
+  | {
+      type: "UPDATE_LAST_MESSAGE";
+      sessionId: string;
+      content: string;
+      reasoningContent?: string;
+    }
+  | {
+      type: "ADD_TOOL_CALL";
+      sessionId: string;
+      call: { name: string; result?: string };
+    }
   | { type: "SET_STREAMING"; value: boolean }
   | { type: "SET_BIDDER"; id: string }
+  | { type: "REFRESH_DASHBOARD" };
 
 function chatReducer(state: ChatState, action: Action): ChatState {
   switch (action.type) {
     case "CREATE_SESSION": {
-      const sessions = { ...state.sessions, [action.session.id]: action.session }
-      return { ...state, sessions, currentSessionId: action.session.id }
+      const sessions = {
+        ...state.sessions,
+        [action.session.id]: action.session,
+      };
+      return { ...state, sessions, currentSessionId: action.session.id };
     }
     case "DELETE_SESSION": {
-      const sessions = { ...state.sessions }
-      delete sessions[action.id]
-      const currentSessionId = state.currentSessionId === action.id ? null : state.currentSessionId
-      return { ...state, sessions, currentSessionId }
+      const sessions = { ...state.sessions };
+      delete sessions[action.id];
+      const currentSessionId =
+        state.currentSessionId === action.id ? null : state.currentSessionId;
+      return { ...state, sessions, currentSessionId };
     }
     case "SET_SESSION":
-      return { ...state, currentSessionId: action.id }
+      return { ...state, currentSessionId: action.id };
     case "SET_PROJECT":
-      return { ...state, projectId: action.id }
+      return { ...state, projectId: action.id };
     case "ADD_MESSAGE": {
-      const session = state.sessions[action.sessionId]
-      if (!session) return state
+      const session = state.sessions[action.sessionId];
+      if (!session) return state;
+      const existingIndex = session.messages.findIndex(
+        (m) => m.id === action.message.id,
+      );
+      const messages =
+        existingIndex >= 0
+          ? session.messages.map((m, i) =>
+              i === existingIndex ? action.message : m,
+            )
+          : [...session.messages, action.message];
       return {
         ...state,
         sessions: {
           ...state.sessions,
           [action.sessionId]: {
             ...session,
-            messages: [...session.messages, action.message],
+            messages,
             updatedAt: Date.now(),
           },
         },
-      }
+      };
     }
     case "UPDATE_LAST_MESSAGE": {
-      const session = state.sessions[action.sessionId]
-      if (!session || session.messages.length === 0) return state
-      const messages = [...session.messages]
-      const last = { ...messages[messages.length - 1] }
-      last.content = action.content
+      const session = state.sessions[action.sessionId];
+      if (!session || session.messages.length === 0) return state;
+      const messages = [...session.messages];
+      const last = { ...messages[messages.length - 1] };
+      last.content = action.content;
       if (action.reasoningContent !== undefined) {
-        last.reasoningContent = (last.reasoningContent || "") + action.reasoningContent
+        last.reasoningContent =
+          (last.reasoningContent || "") + action.reasoningContent;
       }
-      messages[messages.length - 1] = last
+      messages[messages.length - 1] = last;
       return {
         ...state,
-        sessions: { ...state.sessions, [action.sessionId]: { ...session, messages } },
-      }
+        sessions: {
+          ...state.sessions,
+          [action.sessionId]: { ...session, messages },
+        },
+      };
     }
     case "ADD_TOOL_CALL": {
-      const session = state.sessions[action.sessionId]
-      if (!session || session.messages.length === 0) return state
-      const messages = [...session.messages]
-      const last = { ...messages[messages.length - 1] }
-      last.toolCalls = [...(last.toolCalls || []), action.call]
-      messages[messages.length - 1] = last
+      const session = state.sessions[action.sessionId];
+      if (!session || session.messages.length === 0) return state;
+      const messages = [...session.messages];
+      const last = { ...messages[messages.length - 1] };
+      last.toolCalls = [...(last.toolCalls || []), action.call];
+      messages[messages.length - 1] = last;
       return {
         ...state,
-        sessions: { ...state.sessions, [action.sessionId]: { ...session, messages } },
-      }
+        sessions: {
+          ...state.sessions,
+          [action.sessionId]: { ...session, messages },
+        },
+      };
     }
     case "SET_STREAMING":
-      return { ...state, isStreaming: action.value }
+      return { ...state, isStreaming: action.value };
     case "SET_BIDDER":
-      return { ...state, bidderId: action.id }
+      return { ...state, bidderId: action.id };
+    case "REFRESH_DASHBOARD":
+      return { ...state, dashboardVersion: state.dashboardVersion + 1 };
     default:
-      return state
+      return state;
   }
 }
 
 /* ─── Context ─── */
 
 interface ChatContextValue {
-  state: ChatState
-  dispatch: React.Dispatch<Action>
-  currentSession: ChatSession | null
-  createSession: (projectId?: string) => string
-  sendMessage: (content: string) => Promise<void>
-  stopStreaming: () => void
+  state: ChatState;
+  dispatch: React.Dispatch<Action>;
+  currentSession: ChatSession | null;
+  createSession: (projectId?: string) => string;
+  sendMessage: (content: string) => Promise<void>;
+  stopStreaming: () => void;
+  refreshDashboard: () => void;
 }
 
-const ChatContext = createContext<ChatContextValue | null>(null)
+const ChatContext = createContext<ChatContextValue | null>(null);
 
 function generateId() {
-  return Math.random().toString(36).substring(2, 10)
+  return Math.random().toString(36).substring(2, 10);
 }
 
-async function buildProjectContext(projectId?: string | null): Promise<string | null> {
-  if (!projectId) return null
+async function buildProjectContext(
+  projectId?: string | null,
+): Promise<string | null> {
+  if (!projectId) return null;
 
   try {
-    const projects = await fetchProjectsWithPricing()
-    const project = projects.find((p) => p.id === projectId)
-    if (!project) return null
+    const projects = await fetchProjectsWithPricing();
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return null;
 
     const lines = [
       "PROJECT CONTEXT:",
       `- Project: ${project.name}`,
       `${project.city || project.state ? `- Location: ${project.city || ""}${project.city && project.state ? ", " : ""}${project.state || ""}` : ""}`.trim(),
       `- Trade: ${project.trade || "unknown"}`,
-      project.total_bid != null ? `- Current bid total: $${project.total_bid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Current bid total: unavailable",
-      project.total_labor_hours != null ? `- Labor hours: ${project.total_labor_hours.toLocaleString()} hrs` : "- Labor hours: unavailable",
-      project.total_labor != null ? `- Labor cost: $${project.total_labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Labor cost: unavailable",
-      project.total_material != null ? `- Material cost: $${project.total_material.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Material cost: unavailable",
-      project.area_sf != null ? `- Area: ${project.area_sf.toLocaleString()} SF` : "- Area: unavailable",
+      project.total_bid != null
+        ? `- Current bid total: $${project.total_bid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "- Current bid total: unavailable",
+      project.total_labor_hours != null
+        ? `- Labor hours: ${project.total_labor_hours.toLocaleString()} hrs`
+        : "- Labor hours: unavailable",
+      project.total_labor != null
+        ? `- Labor cost: $${project.total_labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "- Labor cost: unavailable",
+      project.total_material != null
+        ? `- Material cost: $${project.total_material.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "- Material cost: unavailable",
+      project.area_sf != null
+        ? `- Area: ${project.area_sf.toLocaleString()} SF`
+        : "- Area: unavailable",
       "",
       "Use the project context above when answering questions about the current bid, especially bid total, labor hours, material cost, and scope. If the user asks for the current bid total, answer with the current bid total. If they ask for labor hours, answer with the labor hours.",
-    ]
+    ];
 
-    return lines.filter(Boolean).join("\n")
+    return lines.filter(Boolean).join("\n");
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -145,15 +196,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isStreaming: false,
     projectId: null,
     bidderId: null,
-  })
+    dashboardVersion: 0,
+  });
 
-  let abortControllerRef = React.useRef<AbortController | null>(null)
+  let abortControllerRef = React.useRef<AbortController | null>(null);
 
-  const currentSession = state.currentSessionId ? state.sessions[state.currentSessionId] ?? null : null
+  const currentSession = state.currentSessionId
+    ? (state.sessions[state.currentSessionId] ?? null)
+    : null;
 
   const createSession = useCallback(
     (projectId?: string) => {
-      const id = generateId()
+      const id = generateId();
       const session: ChatSession = {
         id,
         projectId: projectId || state.projectId || "",
@@ -161,161 +215,175 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         messages: [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
-      }
-      dispatch({ type: "CREATE_SESSION", session })
-      return id
+      };
+      dispatch({ type: "CREATE_SESSION", session });
+      return id;
     },
-    [state.projectId]
-  )
+    [state.projectId],
+  );
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!state.currentSessionId) return
-      const sessionId = state.currentSessionId
+      // Ensure a session exists before sending. If not, create one.
+      let sessionId = state.currentSessionId;
+      if (!sessionId) {
+        // Auto-create a session if none exists (race-condition guard)
+        const newId = createSession();
+        dispatch({ type: "SET_SESSION", id: newId });
+        sessionId = newId;
+        // The dispatch above is async; we need the session to exist in state.sessions
+        // for the rest of this function. Work with what we have.
+      }
 
       const userMsg: ChatMessage = {
         id: generateId(),
         role: "user",
         content,
         timestamp: Date.now(),
-      }
-      dispatch({ type: "ADD_MESSAGE", sessionId, message: userMsg })
+      };
+      dispatch({ type: "ADD_MESSAGE", sessionId, message: userMsg });
 
       const assistantMsg: ChatMessage = {
         id: generateId(),
         role: "assistant",
         content: "",
         timestamp: Date.now(),
-      }
-      dispatch({ type: "ADD_MESSAGE", sessionId, message: assistantMsg })
-      dispatch({ type: "SET_STREAMING", value: true })
+      };
+      dispatch({ type: "ADD_MESSAGE", sessionId, message: assistantMsg });
+      dispatch({ type: "SET_STREAMING", value: true });
 
       // Build messages from the current session history and include the new user message.
-      const session = state.sessions[sessionId]
-      const priorMessages = session?.messages ?? []
+      // Note: state.sessions may not yet include the newly-created session if we
+      // just created it above, but that's fine — we add userMsg manually below.
+      const session = state.sessions[sessionId];
+      const priorMessages = session?.messages ?? [];
       const historyMessages = [...priorMessages, userMsg].map((m) => ({
         role: m.role === "system" ? "system" : m.role,
         content: m.content,
-        ...(m.reasoningContent ? { reasoning_content: m.reasoningContent } : {}),
-      }))
+        ...(m.reasoningContent
+          ? { reasoning_content: m.reasoningContent }
+          : {}),
+      }));
 
-      const abortController = new AbortController()
-      abortControllerRef.current = abortController
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       try {
-        const hasProjectContext = Boolean(session.projectId || state.projectId)
+        const hasProjectContext = Boolean(session.projectId || state.projectId);
         const projectContext = hasProjectContext
           ? null
-          : await buildProjectContext(session.projectId || state.projectId || null)
+          : await buildProjectContext(
+              session.projectId || state.projectId || null,
+            );
         const outboundMessages = projectContext
           ? [{ role: "system", content: projectContext }, ...historyMessages]
-          : historyMessages
+          : historyMessages;
 
         const response = await sendChatMessage(
           outboundMessages,
           state.projectId || undefined,
           state.bidderId || undefined,
           abortController.signal,
-        )
+        );
 
         if (!response.ok) {
-          let message = `Request failed (${response.status})`
+          let message = `Request failed (${response.status})`;
           try {
-            const payload = await response.json()
-            const detail = payload?.detail
+            const payload = await response.json();
+            const detail = payload?.detail;
             if (typeof detail === "string") {
-              message = detail
+              message = detail;
             } else if (detail?.message) {
-              message = detail.message
+              message = detail.message;
               if (detail.retry_after_seconds) {
-                message += ` Retry in ${detail.retry_after_seconds}s.`
+                message += ` Retry in ${detail.retry_after_seconds}s.`;
               }
             }
           } catch {
-            const fallback = await response.text()
-            if (fallback) message = fallback
+            const fallback = await response.text();
+            if (fallback) message = fallback;
           }
-          throw new Error(message)
+          throw new Error(message);
         }
 
-        const reader = response.body!.getReader()
-        const decoder = new TextDecoder()
-        let fullContent = ""
-        let fullReasoning = ""
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = "";
+        let fullReasoning = "";
 
         while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+          const { done, value } = await reader.read();
+          if (done) break;
 
-          const chunk = decoder.decode(value)
-          const lines = chunk.split("\n")
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
-              const dataStr = line.substring(6).trim()
-              if (dataStr === "[DONE]") break
+              const dataStr = line.substring(6).trim();
+              if (dataStr === "[DONE]") break;
 
               try {
-                const data = JSON.parse(dataStr)
+                const data = JSON.parse(dataStr);
 
                 // Handle OpenAI-compatible format (choices array)
                 if (data.choices && Array.isArray(data.choices)) {
-                  const delta = data.choices[0]?.delta
+                  const delta = data.choices[0]?.delta;
                   if (delta) {
                     if (delta.content) {
-                      fullContent += delta.content
+                      fullContent += delta.content;
                       dispatch({
                         type: "UPDATE_LAST_MESSAGE",
                         sessionId,
                         content: fullContent,
-                      })
+                      });
                     }
                     if (delta.reasoning_content) {
-                      fullReasoning += delta.reasoning_content
+                      fullReasoning += delta.reasoning_content;
                       dispatch({
                         type: "UPDATE_LAST_MESSAGE",
                         sessionId,
                         content: fullContent,
                         reasoningContent: delta.reasoning_content,
-                      })
+                      });
                     }
                   }
                 }
                 // Handle custom Hermes format (type field)
                 else if (data.type) {
                   if (data.type === "content") {
-                    fullContent += data.delta
+                    fullContent += data.delta;
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
                       sessionId,
                       content: fullContent,
-                    })
+                    });
                   } else if (data.type === "thought") {
-                    fullReasoning += data.delta
+                    fullReasoning += data.delta;
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
                       sessionId,
                       content: fullContent,
                       reasoningContent: data.delta,
-                    })
+                    });
                   } else if (data.type === "tool_call") {
                     dispatch({
                       type: "ADD_TOOL_CALL",
                       sessionId,
                       call: { name: data.name },
-                    })
+                    });
                   } else if (data.type === "tool_result") {
                     dispatch({
                       type: "ADD_TOOL_CALL",
                       sessionId,
                       call: { name: data.name, result: data.result },
-                    })
+                    });
                   } else if (data.type === "error") {
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
                       sessionId,
                       content: `Error: ${data.message}`,
-                    })
+                    });
                   }
                 }
               } catch {
@@ -330,31 +398,50 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             type: "UPDATE_LAST_MESSAGE",
             sessionId,
             content: `Error: ${err.message}`,
-          })
+          });
         }
       } finally {
-        dispatch({ type: "SET_STREAMING", value: false })
-        abortControllerRef.current = null
+        dispatch({ type: "SET_STREAMING", value: false });
+        abortControllerRef.current = null;
       }
     },
-    [state.currentSessionId, state.projectId, state.sessions, state.bidderId]
-  )
+    [
+      state.currentSessionId,
+      state.projectId,
+      state.sessions,
+      state.bidderId,
+      createSession,
+      dispatch,
+    ],
+  );
 
   const stopStreaming = useCallback(() => {
-    abortControllerRef.current?.abort()
-  }, [])
+    abortControllerRef.current?.abort();
+  }, []);
+
+  const refreshDashboard = useCallback(() => {
+    dispatch({ type: "REFRESH_DASHBOARD" });
+  }, []);
 
   return (
     <ChatContext.Provider
-      value={{ state, dispatch, currentSession, createSession, sendMessage, stopStreaming }}
+      value={{
+        state,
+        dispatch,
+        currentSession,
+        createSession,
+        sendMessage,
+        stopStreaming,
+        refreshDashboard,
+      }}
     >
       {children}
     </ChatContext.Provider>
-  )
+  );
 }
 
 export function useChat() {
-  const ctx = useContext(ChatContext)
-  if (!ctx) throw new Error("useChat must be used within ChatProvider")
-  return ctx
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error("useChat must be used within ChatProvider");
+  return ctx;
 }
