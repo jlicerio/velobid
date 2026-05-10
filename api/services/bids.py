@@ -120,7 +120,7 @@ def generate_bid_files(
         generated = generate(
             project_path=str(project_path.relative_to(PROJECT_ROOT)),
             trade_name=request.trade,
-            output_dir=str(request_output_dir.relative_to(PROJECT_ROOT)),
+            output_dir=str(request_output_dir),
             template_name=request.template_name,
             package_name=request.package_name,
             region=request.region,
@@ -168,7 +168,9 @@ def serialize_bid_preview(bid: Bid, validate: bool = True) -> BidPreviewResponse
         region=bid.region,
         status=bid.status,
         totals=BidTotalsResponse(**bid.sov_summary()),
-        line_items=[LineItemResponse(**line_item.to_dict()) for line_item in bid.line_items],
+        line_items=[
+            LineItemResponse(**line_item.to_dict()) for line_item in bid.line_items
+        ],
         exclusions=bid.exclusions,
         validation=[
             ValidationIssueResponse(field=issue.field, message=issue.message)
@@ -192,7 +194,9 @@ def _summary_from_json_file(path: Path) -> ConfigSummary:
     data = read_json(path)
     return ConfigSummary(
         id=path.stem,
-        name=data.get("full_name") or data.get("name") or path.stem.replace("_", " ").title(),
+        name=data.get("full_name")
+        or data.get("name")
+        or path.stem.replace("_", " ").title(),
         path=str(path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
     )
 
@@ -204,7 +208,9 @@ _pricing_cache: dict = {}
 _PRICING_CACHE_TTL = 30  # seconds
 
 
-def list_projects_with_pricing(bidder_id: str | None = None) -> list[ProjectPricingResponse]:
+def list_projects_with_pricing(
+    bidder_id: str | None = None,
+) -> list[ProjectPricingResponse]:
     """Return every project with real pricing from preview_bid()."""
     now = time.time()
     cache_key = f"list_projects_with_pricing::{bidder_id or 'all'}"
@@ -231,7 +237,9 @@ def list_projects_with_pricing(bidder_id: str | None = None) -> list[ProjectPric
         if versions_path.exists():
             try:
                 version_index = read_json(versions_path)
-                version_count = len(version_index) if isinstance(version_index, list) else 0
+                version_count = (
+                    len(version_index) if isinstance(version_index, list) else 0
+                )
             except Exception:
                 version_count = 0
 
@@ -241,7 +249,9 @@ def list_projects_with_pricing(bidder_id: str | None = None) -> list[ProjectPric
         total_labor = 0.0
         total_labor_hours = 0.0
         try:
-            req = GenerateBidRequest(project_id=project_id, trade="hvac", run_validation=False)
+            req = GenerateBidRequest(
+                project_id=project_id, trade="hvac", run_validation=False
+            )
             preview = preview_bid(req, bidder_id=bidder_id)
             total_bid = preview.totals.total_bid_amount
             total_material = preview.totals.total_material
@@ -276,7 +286,9 @@ def _project_id_from_name(name: str) -> str:
     return re.sub(r"[^a-z0-9_]", "", name.lower().replace(" ", "_"))
 
 
-def create_project(request: CreateProjectRequest, bidder_id: str) -> ProjectPricingResponse:
+def create_project(
+    request: CreateProjectRequest, bidder_id: str
+) -> ProjectPricingResponse:
     """Create a new project config and return its pricing summary."""
     project_id = _project_id_from_name(request.name)
 
@@ -330,7 +342,10 @@ def archive_project(
     with project_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     status = "archived" if archived else "unarchived"
-    return {"message": f"Project '{project_id}' {status} successfully", "archived": archived}
+    return {
+        "message": f"Project '{project_id}' {status} successfully",
+        "archived": archived,
+    }
 
 
 def bulk_archive_project(
