@@ -170,8 +170,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!state.currentSessionId) return
-      const sessionId = state.currentSessionId
+      let sessionId = state.currentSessionId
+      if (!sessionId) {
+        // Auto-create a session if none exists so the user message isn't silently dropped
+        const newId = crypto.randomUUID()
+        dispatch({
+          type: 'CREATE_SESSION',
+          session: {
+            id: newId,
+            projectId: state.projectId || '',
+            title: `Chat ${new Date().toLocaleTimeString()}`,
+            messages: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+        })
+        sessionId = newId
+      }
 
       const userMsg: ChatMessage = {
         id: generateId(),
