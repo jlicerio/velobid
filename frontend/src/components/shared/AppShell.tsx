@@ -54,16 +54,23 @@ export function AppShell() {
     // Set project context in store
     dispatch({ type: "SET_PROJECT", id: currentProjectId || "" });
 
-    // Find existing session for this context, or create one
+    // Find existing session for this context, or create one.
+    // We read state.sessions inside the effect but it is NOT in the dependency
+    // array intentionally — we only want to react to currentProjectId changes.
+    // The sessions value here is from the render that triggered this effect.
     const sessions = Object.values(state.sessions);
     const matchingSession = sessions.find(
-      (s) => s.projectId === (currentProjectId || "")
+      (s) => s.projectId === (currentProjectId || ""),
     );
 
     if (matchingSession) {
-      dispatch({ type: "SET_SESSION", id: matchingSession.id });
+      // Switch to the existing session for this context
+      if (state.currentSessionId !== matchingSession.id) {
+        dispatch({ type: "SET_SESSION", id: matchingSession.id });
+      }
     } else {
-      // Create a new session for this context
+      // Create a new session for this context only if we don't already have
+      // a session with this projectId (prevents duplicates from race conditions)
       const newSessionId = createSession(currentProjectId || undefined);
       dispatch({ type: "SET_SESSION", id: newSessionId });
     }
@@ -78,22 +85,16 @@ export function AppShell() {
       const sessionId = state.currentSessionId;
       if (!sessionId) return;
 
-      const session = state.sessions[sessionId];
-      const hasDashboardContext = session?.messages.some(
-        (message) =>
-          message.role === "system" &&
-          message.content.includes("[dashboard-context]"),
-      );
-
-      if (hasDashboardContext) return;
-
       try {
         const projects = await fetchProjectsWithPricing();
         if (cancelled) return;
 
         const active = projects.filter((p) => !p.archived);
         const archived = projects.filter((p) => p.archived);
-        const totalBid = projects.reduce((sum, p) => sum + (p.total_bid || 0), 0);
+        const totalBid = projects.reduce(
+          (sum, p) => sum + (p.total_bid || 0),
+          0,
+        );
         const totalLaborHours = projects.reduce(
           (sum, p) => sum + (p.total_labor_hours || 0),
           0,
@@ -135,7 +136,7 @@ export function AppShell() {
           type: "ADD_MESSAGE",
           sessionId,
           message: {
-            id: `dashboard-context-${Date.now()}`,
+            id: "dashboard-context",
             role: "system",
             content: dashboardContext,
             timestamp: Date.now(),
@@ -151,7 +152,12 @@ export function AppShell() {
     return () => {
       cancelled = true;
     };
-  }, [currentProjectId, state.currentSessionId, state.sessions, dispatch]);
+  }, [
+    currentProjectId,
+    state.currentSessionId,
+    state.dashboardVersion,
+    dispatch,
+  ]);
 
   // Resize handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -159,10 +165,13 @@ export function AppShell() {
     setIsResizing(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
-    setSidebarWidth(Math.max(320, Math.min(800, e.clientX)));
-  }, [isResizing]);
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
+      setSidebarWidth(Math.max(320, Math.min(800, e.clientX)));
+    },
+    [isResizing],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -194,7 +203,7 @@ export function AppShell() {
           isMobile
             ? "fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[400px] transition-transform duration-200"
             : "relative shrink-0",
-          isMobile && !sidebarOpen && "hidden"
+          isMobile && !sidebarOpen && "hidden",
         )}
       >
         <div className="h-12 border-b flex items-center px-4 gap-2 shrink-0">
@@ -260,7 +269,7 @@ export function AppShell() {
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )
                 }
               >
@@ -270,7 +279,9 @@ export function AppShell() {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             {currentProjectId ? (
-              <span className="text-primary font-medium text-xs">Project view</span>
+              <span className="text-primary font-medium text-xs">
+                Project view
+              </span>
             ) : (
               <span className="text-xs text-muted-foreground">Dashboard</span>
             )}
