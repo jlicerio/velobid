@@ -5,6 +5,7 @@ export interface ApiRequestOptions {
   headers?: Record<string, string>
   body?: unknown
   signal?: AbortSignal
+  rawResponse?: boolean
 }
 
 export async function apiFetch<T>(
@@ -57,6 +58,10 @@ export async function apiFetch<T>(
         detail = response.statusText
       }
       throw new ApiError(response.status, detail || 'Request failed', errorDetails)
+    }
+
+    if (options.rawResponse) {
+      return response as unknown as T
     }
 
     // Handle blob/file responses
