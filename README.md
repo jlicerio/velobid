@@ -2,9 +2,14 @@
 
 VeloBid is a Dockerized bid generation and Hermes-assisted estimating stack.
 
-## Current Phase 1 Path
+## Current Paths
 
-The active deployment path is **Linux host Docker directly**:
+VeloBid now has two container paths:
+
+- **Dev sync:** mounted source + Vite HMR for fast local iteration
+- **Production:** Linux host Docker directly, deployed from a commit
+
+Production uses:
 
 - VeloBid API/UI container
 - Hermes gateway container
@@ -14,6 +19,8 @@ The active deployment path is **Linux host Docker directly**:
 Start here:
 
 - [Documentation index](docs/README.md)
+- [Development workflow](docs/development.md)
+- [Testing guide](docs/testing.md)
 - [Linux host runbook](docs/runbook-linux-no-vm.md)
 - [Documentation status](docs/DOCUMENTATION_STATUS.md)
 - [Latest run report (2026-05-08)](docs/kaban-opencode-run-report-2026-05-08.md)
@@ -21,9 +28,12 @@ Start here:
 ## Common Commands
 
 ```bash
+docker compose -f docker-compose.dev.yml up --build
 sudo bash scripts/linux-host-init.sh
 sudo bash scripts/linux-host-deploy.sh
 sudo bash scripts/linux-host-backup.sh
+python scripts/verify.py
+python scripts/verify.py --live
 ```
 
 ## Notes

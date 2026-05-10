@@ -1,4 +1,7 @@
-"""Test script that starts the server, tests it, then shuts it down."""
+"""Legacy server smoke script.
+
+Prefer `python scripts/verify.py --live` for the canonical smoke entrypoint.
+"""
 import sys
 import requests
 import time

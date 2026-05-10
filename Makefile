@@ -1,9 +1,9 @@
 # VeloBid Makefile
-# Quick commands for the multi-tenant Hermes stack.
+# Quick commands for dev sync, production deploy, and verification.
 
 # ─── Stack Management ───────────────────────────────────────────
 
-.PHONY: up down restart ps logs
+.PHONY: up down restart ps logs dev-up dev-down dev-ps dev-logs
 
 up:      ## Start all services
 	docker compose up -d
@@ -19,6 +19,18 @@ ps:      ## Show container status
 
 logs:    ## Tail logs from both containers
 	docker compose logs --tail=50 -f
+
+dev-up:  ## Start the dev-sync stack
+	docker compose -f docker-compose.dev.yml up -d --build
+
+dev-down:  ## Stop the dev-sync stack
+	docker compose -f docker-compose.dev.yml down
+
+dev-ps:  ## Show dev-sync container status
+	docker compose -f docker-compose.dev.yml ps
+
+dev-logs:  ## Tail logs from the dev-sync stack
+	docker compose -f docker-compose.dev.yml logs --tail=50 -f
 
 # ─── Build ───────────────────────────────────────────────────────
 
@@ -82,25 +94,18 @@ health-hermes:
 
 # ─── Test ────────────────────────────────────────────────────────
 
-.PHONY: test
+.PHONY: verify smoke smoke-dev test
 
-test:  ## End-to-end smoke test
-	@echo "=== VeloBid Smoke Test ==="
-	@echo "1. Health check..."
-	curl -s -o /dev/null -w "   HTTP %{http_code}\n" http://localhost:8000/api/v1/meta
-	@echo "2. Hermes API..."
-	curl -s -o /dev/null -w "   HTTP %{http_code}\n" \
-		-H "Authorization: Bearer velobid-internal" http://localhost:8644/v1/models
-	@echo "3. Admin server..."
-	curl -s http://localhost:8644/admin/health
-	@echo ""
-	@echo "4. Chat echo test..."
-	curl -s --max-time 30 -X POST http://localhost:8000/api/v1/agent/hermes-chat \
-		-H "Content-Type: application/json" \
-		-d '{"messages":[{"role":"user","content":"Say only: OK"}],"bidder_id":"acme_hvac"}' \
-		| grep -o '"content":"[^"]*"' | tr -d '\n'
-	@echo ""
-	@echo "=== Done ==="
+verify:  ## Run the canonical unit test entrypoint
+	python scripts/verify.py
+
+smoke:  ## Run host-stack smoke checks
+	python scripts/verify.py --live
+
+smoke-dev:  ## Run dev-sync smoke checks against Vite on :5173
+	python scripts/verify.py --live --frontend-url http://127.0.0.1:5173
+
+test: smoke  ## Backward-compatible smoke alias
 
 # ─── K8s ─────────────────────────────────────────────────────────
 

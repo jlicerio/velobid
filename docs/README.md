@@ -10,6 +10,8 @@ Docs you should read first for current operations.
 
 | File | Purpose |
 |------|---------|
+| [development.md](development.md) | Dev-sync container workflow with mounted source, Vite HMR, and optional Hermes profile. |
+| [testing.md](testing.md) | Canonical validation entrypoint and smoke-check commands. |
 | [runbook-linux-no-vm.md](runbook-linux-no-vm.md) | **Primary deployment runbook.** Linux host Docker Compose path using `docker-compose.host.yml`, `/srv/velobid` storage, and `scripts/linux-host-*.sh`. |
 | [stripe-billing-runbook.md](stripe-billing-runbook.md) | Configure Stripe Checkout, Customer Portal, webhook signing, and production env values for billing. |
 | [kaban-opencode-run-report-2026-05-08.md](kaban-opencode-run-report-2026-05-08.md) | Run report for Kaban automation completion, loop hardening, and Linux host Docker redeploy on 2026-05-08. |
@@ -65,7 +67,11 @@ Superseded runbooks, run reports, and the VM bootstrap pack. Kept for reference 
 
 ## Quick Links
 
+- **Dev sync:** `docker compose -f docker-compose.dev.yml up --build`
 - **Deploy:** `scripts/linux-host-deploy.sh`
+- **Verify:** `python scripts/verify.py`
+- **Smoke:** `python scripts/verify.py --live`
+- **Dev smoke:** `python scripts/verify.py --live --frontend-url http://127.0.0.1:5173`
 - **Init storage:** `scripts/linux-host-init.sh`
 - **Backup:** `scripts/linux-host-backup.sh`
 - **Restore:** `scripts/linux-host-restore.sh`

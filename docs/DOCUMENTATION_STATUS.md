@@ -1,10 +1,24 @@
 # VeloBid Documentation Status
 
-Last updated: 2026-05-08
+Last updated: 2026-05-10
 
 ## What is current
 
-The active deployment path is **Linux host Docker directly**.
+The active workflow is split into two paths:
+
+- **Dev sync:** mounted-source Docker Compose with Vite HMR
+- **Production:** Linux host Docker directly
+
+- **Dev workflow docs:** `docs/development.md`
+  - Use `docker-compose.dev.yml`
+  - Runs the backend with `uvicorn --reload`
+  - Runs the frontend with Vite on port `5173`
+  - Optional Hermes profile for chat/AI development
+
+- **Testing docs:** `docs/testing.md`
+  - Canonical `python scripts/verify.py` entrypoint
+  - Live smoke checks for host deploys and dev sync
+  - Legacy QA scripts are retained for historical reference
 
 - **Primary runbook:** `docs/runbook-linux-no-vm.md`
   - Uses `docker-compose.host.yml`

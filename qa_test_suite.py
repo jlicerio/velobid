@@ -1,5 +1,6 @@
-"""Comprehensive VeloBid API QA Test Suite.
-Tests all endpoints by calling the application layer directly.
+"""Legacy comprehensive QA script.
+
+Prefer `python scripts/verify.py` for the canonical validation entrypoint.
 """
 import json
 import sys

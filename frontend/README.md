@@ -11,6 +11,14 @@ npm run dev
 
 The Vite dev server runs at `http://localhost:5173` and proxies `/api/*` to `http://localhost:8000`.
 
+For the containerized dev-sync workflow:
+
+```bash
+docker compose -f ../docker-compose.dev.yml up --build
+```
+
+Set `VITE_API_PROXY_TARGET` if the frontend should proxy to a different backend target.
+
 ## Build
 
 ```bash
