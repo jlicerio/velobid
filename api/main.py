@@ -1,5 +1,8 @@
 ﻿"""FastAPI application entrypoint for the Velobid UI/API."""
 
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -69,9 +72,24 @@ def index() -> FileResponse:
 @app.get("/api/v1/meta")
 def meta() -> dict[str, str]:
     """Expose basic runtime paths for debugging local setup."""
+    node_path = shutil.which("node")
+    node_version = "unavailable"
+    if node_path:
+        try:
+            node_version = subprocess.run(
+                [node_path, "--version"],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).stdout.strip() or "unavailable"
+        except Exception:
+            node_version = "unavailable"
+
     return {
         "project_root": str(PROJECT_ROOT),
         "bid_projects_dir": str(BID_PROJECTS_DIR),
+        "python": sys.version.split()[0],
+        "node": node_version,
     }
 
 
