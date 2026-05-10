@@ -231,8 +231,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const newId = createSession();
         dispatch({ type: "SET_SESSION", id: newId });
         sessionId = newId;
-        // The dispatch above is async; we need the session to exist in state.sessions
-        // for the rest of this function. Work with what we have.
       }
 
       const userMsg: ChatMessage = {
