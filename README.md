@@ -19,6 +19,7 @@ Production uses:
 Start here:
 
 - [Documentation index](docs/README.md)
+- [Container sync notes](docs/container-sync-notes.md)
 - [Development workflow](docs/development.md)
 - [Testing guide](docs/testing.md)
 - [Linux host runbook](docs/runbook-linux-no-vm.md)

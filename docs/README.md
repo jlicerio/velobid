@@ -10,6 +10,7 @@ Docs you should read first for current operations.
 
 | File | Purpose |
 |------|---------|
+| [container-sync-notes.md](container-sync-notes.md) | Short note on the dev-sync vs production container split and the host tree. |
 | [development.md](development.md) | Dev-sync container workflow with mounted source, Vite HMR, and optional Hermes profile. |
 | [testing.md](testing.md) | Canonical validation entrypoint and smoke-check commands. |
 | [runbook-linux-no-vm.md](runbook-linux-no-vm.md) | **Primary deployment runbook.** Linux host Docker Compose path using `docker-compose.host.yml`, `/srv/velobid` storage, and `scripts/linux-host-*.sh`. |

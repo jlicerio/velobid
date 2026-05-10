@@ -15,6 +15,10 @@ The active workflow is split into two paths:
   - Runs the frontend with Vite on port `5173`
   - Optional Hermes profile for chat/AI development
 
+- **Container sync notes:** `docs/container-sync-notes.md`
+  - Short reminder of the dev-sync vs production split
+  - Points at the host tree and current verification entrypoint
+
 - **Testing docs:** `docs/testing.md`
   - Canonical `python scripts/verify.py` entrypoint
   - Live smoke checks for host deploys and dev sync
