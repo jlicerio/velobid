@@ -98,8 +98,8 @@ export function ProjectsPage() {
     if (filter === "archived") return p.archived;
     return true;
   }).filter((project) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase().trim();
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
     return [
       project.name,
       project.city,
