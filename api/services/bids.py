@@ -33,6 +33,20 @@ TRADES_DIR = CONFIG_DIR / "trades"
 BID_PROJECTS_DIR = Path("/data/velobid/bids")
 OUTPUT_DIR = BID_PROJECTS_DIR / "api_generated"
 LEGACY_DEFAULT_BIDDER_ID = "air_hero"
+DEFAULT_PROJECT_STATUS = "estimating"
+
+PROJECT_STATUS_LABELS: dict[str, str] = {
+    "draft": "Draft",
+    "estimating": "Estimating",
+    "estimate": "Estimating",
+    "pending_clarification": "Pending Clarification",
+    "pending_info": "Pending Clarification",
+    "ready_to_submit": "Ready to Submit",
+    "submitted": "Submitted",
+    "won": "Won",
+    "lost": "Lost",
+    "on_hold": "On Hold",
+}
 
 
 @contextmanager
@@ -74,6 +88,18 @@ def list_project_configs(
 def list_trade_configs() -> list[ConfigSummary]:
     """Return available trade JSON files for UI selection."""
     return [_summary_from_json_file(path) for path in sorted(TRADES_DIR.glob("*.json"))]
+
+
+def project_status_label(status: str | None) -> str:
+    """Return a display label for a project lifecycle status."""
+    if not status:
+        return PROJECT_STATUS_LABELS[DEFAULT_PROJECT_STATUS]
+
+    normalized = status.strip().lower().replace(" ", "_")
+    return PROJECT_STATUS_LABELS.get(
+        normalized,
+        normalized.replace("_", " ").title(),
+    )
 
 
 def build_bid_for_request(
