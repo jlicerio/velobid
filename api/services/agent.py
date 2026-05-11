@@ -18,7 +18,8 @@ from api.services.bids import (
 )
 from generate_pdfs import generate
 
-load_dotenv()
+ENV_FILE = Path(os.getenv("VELOBID_ENV_FILE", "/app/.env"))
+load_dotenv(dotenv_path=ENV_FILE if ENV_FILE.exists() else None)
 
 client = OpenAI(
     api_key=os.getenv("OPENCODE_API_KEY"),
