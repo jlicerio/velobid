@@ -4,7 +4,7 @@ import { SessionSidebar } from "./session-sidebar"
 import { MessageList } from "./message-list"
 import { MessageInput } from "./message-input"
 import { SuggestionChips } from "./suggestion-chips"
-import { Bot } from "lucide-react"
+import { DashboardSnapshotCard } from "./dashboard-snapshot"
 import { cn } from "@/lib/utils"
 
 interface ChatPanelProps {
@@ -13,7 +13,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ className }: ChatPanelProps) {
   const { state, currentSession, createSession, dispatch, sendMessage } = useChat()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
 
   // Ensure a session exists
   React.useEffect(() => {
@@ -45,16 +45,9 @@ export function ChatPanel({ className }: ChatPanelProps) {
 
       {/* Main chat area */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Header */}
-        <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-          <Bot className="h-5 w-5" />
-          <span className="text-sm font-medium">AI Assistant</span>
-          {currentSession?.projectId && (
-            <span className="ml-auto text-xs text-muted-foreground">
-              Project: {currentSession.projectId}
-            </span>
-          )}
-        </div>
+        {!currentSession?.projectId && state.dashboardSnapshot && (
+          <DashboardSnapshotCard snapshot={state.dashboardSnapshot} />
+        )}
 
         {/* Messages */}
         <MessageList />

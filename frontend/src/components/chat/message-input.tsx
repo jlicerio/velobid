@@ -6,11 +6,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Send, Mic, Square } from "lucide-react"
 
 export function MessageInput() {
-  const { sendMessage, stopStreaming, state } = useChat()
+  const { sendMessage, stopStreaming, state, currentSession } = useChat()
   const [text, setText] = useState("")
   const [isListening, setIsListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const placeholder = currentSession?.projectId
+    ? "Ask about the project..."
+    : "Ask about the portfolio..."
 
   const handleSend = async () => {
     const trimmed = text.trim()
@@ -82,7 +85,7 @@ export function MessageInput() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about the project..."
+            placeholder={placeholder}
             className="pr-10"
             disabled={state.isStreaming}
           />

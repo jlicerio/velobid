@@ -1,24 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Project } from "@/api/services/projects";
-import {
-  fetchProjectsWithPricing,
-  archiveProject,
-  bulkArchiveProjects,
-  exportPortfolioCsv,
-} from "@/api/services/projects";
+import { fetchProjectsWithPricing, archiveProject, bulkArchiveProjects, exportPortfolioCsv } from "@/api/services/projects";
 import { previewBid } from "@/api/services/bids";
-import { useChat } from "@/lib/chat-store";
-import {
-  Search,
-  RefreshCw,
-  Archive,
-  FolderKanban,
-  BadgeDollarSign,
-  Clock3,
-  Layers3,
-  Download,
-} from "lucide-react";
+import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
+import { Search, FolderKanban, BadgeDollarSign, Clock3, Layers3, Download } from "lucide-react";
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -26,12 +12,9 @@ export function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "archived">("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<
-    "name" | "bid" | "labor" | "hours" | "area"
-  >("name");
+  const [sortBy, setSortBy] = useState<"name" | "bid" | "labor" | "hours" | "area">("name");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
-  const { refreshDashboard } = useChat();
 
   useEffect(() => {
     fetchProjects();
@@ -52,54 +35,51 @@ export function ProjectsPage() {
   }
 
   async function enrichLaborHours(baseProjects: Project[]) {
-    const needsHours = baseProjects.filter(
-      (project) => project.total_labor_hours == null,
-    );
-    if (needsHours.length === 0) return;
+    const needsHours = baseProjects.filter((project) => project.total_labor_hours == null)
+    if (needsHours.length === 0) return
 
     type ProjectUpdate = {
-      id: string;
-      total_bid?: number;
-      total_material?: number;
-      total_labor?: number;
-      total_labor_hours?: number;
-    };
+      id: string
+      total_bid?: number
+      total_material?: number
+      total_labor?: number
+      total_labor_hours?: number
+    }
 
     const updates = await Promise.all(
       needsHours.map(async (project) => {
         try {
-          const preview = await previewBid(project.id, project.trade || "hvac");
+          const preview = await previewBid(project.id, project.trade || "hvac")
           return {
             id: project.id,
             total_bid: preview.totals.total_bid_amount,
             total_material: preview.totals.total_material,
             total_labor: preview.totals.total_labor,
             total_labor_hours: preview.totals.total_labor_hours,
-          };
+          }
         } catch {
-          return null;
+          return null
         }
-      }),
-    );
+      })
+    )
 
-    const updateMap = new Map<string, ProjectUpdate>();
+    const updateMap = new Map<string, ProjectUpdate>()
     for (const item of updates) {
-      if (item) updateMap.set(item.id, item);
+      if (item) updateMap.set(item.id, item)
     }
 
     setProjects((current) =>
       current.map((project) => {
-        const update = updateMap.get(project.id);
-        return update ? { ...project, ...update } : project;
-      }),
-    );
+        const update = updateMap.get(project.id)
+        return update ? { ...project, ...update } : project
+      })
+    )
   }
 
   async function handleArchive(projectId: string, archive: boolean) {
     try {
       await archiveProject(projectId, archive);
       await fetchProjects();
-      refreshDashboard();
     } catch (e: unknown) {
       console.error("Archive failed:", e);
     }
@@ -114,41 +94,37 @@ export function ProjectsPage() {
     });
   }
 
-  const filtered = projects
-    .filter((p) => {
-      if (filter === "active") return !p.archived;
-      if (filter === "archived") return p.archived;
-      return true;
-    })
-    .filter((project) => {
-      const q = search.trim().toLowerCase();
-      if (!q) return true;
-      return [
-        project.name,
-        project.city,
-        project.state,
-        project.trade,
-        project.id,
-      ].some((value) => (value || "").toLowerCase().includes(q));
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "bid":
-          return (b.total_bid || 0) - (a.total_bid || 0);
-        case "labor":
-          return (b.total_labor || 0) - (a.total_labor || 0);
-        case "hours":
-          return (b.total_labor_hours || 0) - (a.total_labor_hours || 0);
-        case "area":
-          return (b.area_sf || 0) - (a.area_sf || 0);
-        case "name":
-        default:
-          return a.name.localeCompare(b.name);
-      }
-    });
+  const filtered = projects.filter((p) => {
+    if (filter === "active") return !p.archived;
+    if (filter === "archived") return p.archived;
+    return true;
+  }).filter((project) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase().trim();
+    return [
+      project.name,
+      project.city,
+      project.state,
+      project.trade,
+      project.id,
+    ].some((value) => (value || "").toLowerCase().includes(q));
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "bid":
+        return (b.total_bid || 0) - (a.total_bid || 0);
+      case "labor":
+        return (b.total_labor || 0) - (a.total_labor || 0);
+      case "hours":
+        return (b.total_labor_hours || 0) - (a.total_labor_hours || 0);
+      case "area":
+        return (b.area_sf || 0) - (a.area_sf || 0);
+      case "name":
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  });
 
-  const allVisibleSelected =
-    filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+  const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
 
   function toggleSelectAll() {
     setSelectedIds((prev) => {
@@ -168,7 +144,6 @@ export function ProjectsPage() {
       await bulkArchiveProjects(Array.from(selectedIds), archive);
       setSelectedIds(new Set());
       await fetchProjects();
-      refreshDashboard();
     } catch (e: unknown) {
       console.error("Bulk archive failed:", e);
     }
@@ -186,54 +161,15 @@ export function ProjectsPage() {
       acc.area += project.area_sf || 0;
       return acc;
     },
-    {
-      total: 0,
-      active: 0,
-      archived: 0,
-      bid: 0,
-      material: 0,
-      labor: 0,
-      hours: 0,
-      area: 0,
-    },
+    { total: 0, active: 0, archived: 0, bid: 0, material: 0, labor: 0, hours: 0, area: 0 }
   );
 
-  const visibleSummary = filtered.reduce(
-    (acc, project) => {
-      acc.total += 1;
-      acc.bid += project.total_bid || 0;
-      acc.labor += project.total_labor || 0;
-      acc.hours += project.total_labor_hours || 0;
-      acc.area += project.area_sf || 0;
-      return acc;
-    },
-    { total: 0, bid: 0, labor: 0, hours: 0, area: 0 },
-  );
-
-  const money = (v?: number) =>
-    v != null
-      ? `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-      : "—";
+  const money = (v?: number) => v != null ? `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
   const statCards = [
-    {
-      label: "Projects",
-      value: summary.total.toLocaleString(),
-      icon: FolderKanban,
-    },
+    { label: "Projects", value: summary.total.toLocaleString(), icon: FolderKanban },
     { label: "Active", value: summary.active.toLocaleString(), icon: Layers3 },
-    {
-      label: "Archived",
-      value: summary.archived.toLocaleString(),
-      icon: Archive,
-    },
     { label: "Total Bid", value: money(summary.bid), icon: BadgeDollarSign },
-    {
-      label: "Labor Hours",
-      value: summary.hours.toLocaleString(undefined, {
-        maximumFractionDigits: 1,
-      }),
-      icon: Clock3,
-    },
+    { label: "Labor Hours", value: summary.hours.toLocaleString(undefined, { maximumFractionDigits: 1 }), icon: Clock3 },
   ];
 
   return (
@@ -242,30 +178,14 @@ export function ProjectsPage() {
       <div className="rounded-2xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
-              Projects Dashboard
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-              Full project overview and management
-            </h1>
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Projects Dashboard</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Full project overview and management</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Track total bid value, labor hours, material spend, and project
-              status across the whole portfolio.
+              Track total bid value, labor hours, material spend, and project status across the whole portfolio.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={fetchProjects}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-background text-sm hover:bg-accent"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </button>
-            <button
-              disabled
-              title="Coming soon"
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium shadow-sm cursor-not-allowed opacity-60"
-            >
+            <button disabled title="Coming soon" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium shadow-sm cursor-not-allowed opacity-60">
               + New Project
             </button>
           </div>
@@ -275,23 +195,16 @@ export function ProjectsPage() {
       {/* Overview cards */}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {statCards.map((stat) => {
-          const Icon = stat.icon;
+          const Icon = stat.icon
           return (
-            <div
-              key={stat.label}
-              className="rounded-xl border bg-card p-4 shadow-sm"
-            >
+            <div key={stat.label} className="rounded-xl border bg-card p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {stat.label}
-                </p>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{stat.label}</p>
                 <Icon className="h-4 w-4 text-primary/80" />
               </div>
-              <div className="mt-3 text-2xl font-semibold tracking-tight">
-                {stat.value}
-              </div>
+              <div className="mt-3 text-2xl font-semibold tracking-tight">{stat.value}</div>
             </div>
-          );
+          )
         })}
       </div>
 
@@ -340,9 +253,9 @@ export function ProjectsPage() {
                   <span className="ml-1.5 text-xs opacity-60">
                     {f === "all"
                       ? projects.length
-                      : projects.filter((p) =>
-                          f === "active" ? !p.archived : p.archived,
-                        ).length}
+                      : f === "active"
+                      ? projects.filter((p) => !p.archived).length
+                      : projects.filter((p) => p.archived).length}
                   </span>
                 </button>
               ))}
@@ -361,9 +274,7 @@ export function ProjectsPage() {
               </label>
               {selectedIds.size > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {selectedIds.size} selected
-                  </span>
+                  <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
                   <button
                     onClick={() => handleBulkArchive(true)}
                     className="text-xs px-2.5 py-1.5 rounded-md border hover:bg-accent transition-colors"
@@ -398,10 +309,7 @@ export function ProjectsPage() {
           {error && (
             <div className="flex flex-col items-center justify-center h-64 gap-4 rounded-xl border bg-card">
               <p className="text-destructive">Error: {error}</p>
-              <button
-                onClick={fetchProjects}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm shadow-sm"
-              >
+              <button onClick={fetchProjects} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm shadow-sm">
                 Retry
               </button>
             </div>
@@ -411,11 +319,7 @@ export function ProjectsPage() {
           {!loading && !error && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground rounded-xl border bg-card">
               <p className="text-lg mb-2">
-                {filter === "all"
-                  ? "No projects yet"
-                  : filter === "active"
-                    ? "No active projects"
-                    : "No archived projects"}
+                {filter === "all" ? "No projects yet" : filter === "active" ? "No active projects" : "No archived projects"}
               </p>
               <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm shadow-sm">
                 Create your first project
@@ -429,10 +333,10 @@ export function ProjectsPage() {
               {filtered.map((project) => (
                 <div
                   key={project.id}
-                  className="border rounded-xl p-5 hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer bg-card group"
+                  className="group cursor-pointer rounded-xl border bg-card p-5 transition-all duration-200 hover:border-primary/20 hover:shadow-lg"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <input
                         type="checkbox"
@@ -446,81 +350,61 @@ export function ProjectsPage() {
                           {project.name}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {project.city || project.state
-                            ? `${project.city || ""}, ${project.state || ""}`
-                            : project.trade || "—"}
+                          {(project.city || project.state) ? `${project.city || ""}, ${project.state || ""}` : project.trade || "—"}
                         </p>
                       </div>
                     </div>
-                    {project.archived && (
-                      <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full shrink-0 ml-2">
-                        Archived
-                      </span>
-                    )}
+                    <div className="flex flex-wrap items-center justify-end gap-2 shrink-0 ml-2">
+                      <ProjectStatusBadge status={project.status} archived={project.archived} />
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                  <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         Total Bid
                       </div>
-                      <div className="text-base font-bold mt-0.5">
-                        {money(project.total_bid)}
-                      </div>
+                      <div className="mt-1 text-lg font-semibold tracking-tight">{money(project.total_bid)}</div>
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-                        {project.total_labor_hours != null
-                          ? "Labor Hours"
-                          : "Labor Cost"}
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        {project.total_labor_hours != null ? "Labor Hours" : "Labor Cost"}
                       </div>
-                      <div className="text-base font-bold mt-0.5">
+                      <div className="mt-1 text-lg font-semibold tracking-tight">
                         {project.total_labor_hours != null
                           ? `${project.total_labor_hours.toLocaleString()} hrs`
                           : money(project.total_labor)}
                       </div>
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         Materials
                       </div>
-                      <div className="text-base font-bold mt-0.5">
-                        {money(project.total_material)}
-                      </div>
+                      <div className="mt-1 text-lg font-semibold tracking-tight">{money(project.total_material)}</div>
                     </div>
-                    <div className="bg-muted/30 rounded-lg p-2.5">
-                      <div className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                    <div className="rounded-lg border bg-muted/25 p-3">
+                      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                         Area
                       </div>
-                      <div className="text-base font-bold mt-0.5">
-                        {project.area_sf
-                          ? `${project.area_sf.toLocaleString()} SF`
-                          : "—"}
+                      <div className="mt-1 text-lg font-semibold tracking-tight">
+                        {project.area_sf ? `${project.area_sf.toLocaleString()} SF` : "—"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      {project.trade ? (
-                        <span className="capitalize">{project.trade}</span>
-                      ) : null}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {project.trade ? <span className="rounded-full border bg-muted/30 px-2 py-1 capitalize">{project.trade}</span> : null}
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/projects/${project.id}`);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}
                         className="text-xs px-2.5 py-1 rounded-md border hover:bg-accent transition-colors"
                       >
                         Open
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleArchive(project.id, !project.archived);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); handleArchive(project.id, !project.archived); }}
                         className="text-xs px-2.5 py-1 rounded-md border hover:bg-accent transition-colors"
                       >
                         {project.archived ? "Unarchive" : "Archive"}
@@ -536,84 +420,22 @@ export function ProjectsPage() {
         {/* Management tools */}
         <aside className="space-y-4">
           <div className="rounded-xl border bg-card p-4 shadow-sm">
-            <h2 className="text-sm font-semibold">Management Tools</h2>
+            <h2 className="text-sm font-semibold">Export</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Quick actions for the portfolio and the currently visible set.
+              Download the current portfolio data.
             </p>
-
-            <div className="mt-4 space-y-2">
-              <button
-                onClick={fetchProjects}
-                className="w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm hover:bg-accent"
-              >
-                <span className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4" /> Refresh data
-                </span>
-                <span className="text-xs text-muted-foreground">Live</span>
-              </button>
-              <button
-                onClick={() => setFilter("active")}
-                className="w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm hover:bg-accent"
-              >
-                <span className="flex items-center gap-2">
-                  <Layers3 className="h-4 w-4" /> Show active
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {summary.active}
-                </span>
-              </button>
-              <button
-                onClick={() => setFilter("archived")}
-                className="w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm hover:bg-accent"
-              >
-                <span className="flex items-center gap-2">
-                  <Archive className="h-4 w-4" /> Show archived
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {summary.archived}
-                </span>
-              </button>
+            <div className="mt-4">
               <button
                 onClick={exportPortfolioCsv}
                 className="w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm hover:bg-accent"
               >
-                <span className="flex items-center gap-2">
-                  <Download className="h-4 w-4" /> Export CSV
-                </span>
+                <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Export CSV</span>
                 <span className="text-xs text-muted-foreground">Summary</span>
               </button>
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-4 shadow-sm">
-            <h2 className="text-sm font-semibold">Portfolio Snapshot</h2>
-            <div className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Visible projects</span>
-                <span className="font-medium">{visibleSummary.total}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Visible bid value</span>
-                <span className="font-medium">{money(visibleSummary.bid)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">
-                  Visible labor hours
-                </span>
-                <span className="font-medium">
-                  {visibleSummary.hours.toLocaleString(undefined, {
-                    maximumFractionDigits: 1,
-                  })}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Visible area</span>
-                <span className="font-medium">
-                  {visibleSummary.area.toLocaleString()} SF
-                </span>
-              </div>
-            </div>
-          </div>
+
         </aside>
       </div>
     </div>
