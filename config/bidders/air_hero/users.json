@@ -3,8 +3,8 @@
     "id": "test_user",
     "name": "Test User",
     "role": "Estimator",
-    "password_salt": "5b2ae035677587e2b1593606dca0a187",
-    "password_hash": "3cc8680d54d79a6366a819cd56f1e1faa48c179eacc6bbb1992c2bd20e89a00c"
+    "password_salt": "f593958970ccacbebf1046b1b3b2cd2f",
+    "password_hash": "f73fa8e765c74907bd4732ff21bb5476b7a7710acc0d0d4b1003bbf6147962e2"
   },
   {
     "id": "integration_tester",

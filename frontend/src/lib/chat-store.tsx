@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback } from "react"
-import type { ChatMessage, ChatSession } from "./types"
+import type { ChatMessage, ChatSession, StreamError } from "./types"
 import { sendChatMessage } from "@/api/services/chat"
 import { fetchProjectsWithPricing } from "@/api/services/projects"
 import {
@@ -30,6 +30,8 @@ type Action =
   | { type: "SET_STREAMING"; value: boolean }
   | { type: "SET_BIDDER"; id: string }
   | { type: "SET_DASHBOARD_SNAPSHOT"; snapshot: DashboardSnapshot | null }
+  | { type: "SET_STREAM_ERROR"; sessionId: string; error: StreamError }
+  | { type: "CLEAR_STREAM_ERROR"; sessionId: string }
 
 function chatReducer(state: ChatState, action: Action): ChatState {
   switch (action.type) {
@@ -95,6 +97,28 @@ function chatReducer(state: ChatState, action: Action): ChatState {
       return { ...state, bidderId: action.id }
     case "SET_DASHBOARD_SNAPSHOT":
       return { ...state, dashboardSnapshot: action.snapshot }
+    case "SET_STREAM_ERROR": {
+      const session = state.sessions[action.sessionId]
+      if (!session) return state
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [action.sessionId]: { ...session, streamError: action.error },
+        },
+      }
+    }
+    case "CLEAR_STREAM_ERROR": {
+      const session = state.sessions[action.sessionId]
+      if (!session) return state
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [action.sessionId]: { ...session, streamError: null },
+        },
+      }
+    }
     default:
       return state
   }

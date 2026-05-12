@@ -12,6 +12,16 @@ export interface ToolCallInfo {
   result?: string
 }
 
+export type StreamErrorCode =
+  | "empty_stream"
+  | "parse_error"
+
+export interface StreamError {
+  code: StreamErrorCode
+  message: string
+  timestamp: number
+}
+
 export interface ChatSession {
   id: string
   projectId: string
@@ -19,6 +29,7 @@ export interface ChatSession {
   messages: ChatMessage[]
   createdAt: number
   updatedAt: number
+  streamError?: StreamError | null
 }
 
 export interface SSEEvent {
