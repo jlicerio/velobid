@@ -77,10 +77,17 @@ export function ProjectsPage() {
   }
 
   async function handleArchive(projectId: string, archive: boolean) {
+    // Optimistic update
+    setProjects((current) =>
+      current.map((p) => (p.id === projectId ? { ...p, archived: archive } : p))
+    );
     try {
       await archiveProject(projectId, archive);
-      await fetchProjects();
     } catch (e: unknown) {
+      // Rollback on error
+      setProjects((current) =>
+        current.map((p) => (p.id === projectId ? { ...p, archived: !archive } : p))
+      );
       console.error("Archive failed:", e);
     }
   }
@@ -139,12 +146,23 @@ export function ProjectsPage() {
   }
 
   async function handleBulkArchive(archive: boolean) {
-    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    // Optimistic update
+    const archiveSet = new Set(ids);
+    setProjects((current) =>
+      current.map((p) => (archiveSet.has(p.id) ? { ...p, archived: archive } : p))
+    );
+    setSelectedIds(new Set());
+
     try {
-      await bulkArchiveProjects(Array.from(selectedIds), archive);
-      setSelectedIds(new Set());
-      await fetchProjects();
+      await bulkArchiveProjects(ids, archive);
     } catch (e: unknown) {
+      // Rollback on error
+      setProjects((current) =>
+        current.map((p) => (archiveSet.has(p.id) ? { ...p, archived: !archive } : p))
+      );
       console.error("Bulk archive failed:", e);
     }
   }

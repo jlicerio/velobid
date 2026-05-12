@@ -367,6 +367,8 @@ def archive_project(
     data["archived"] = archived
     with project_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+    # Bust the pricing cache so the next read reflects the change
+    _pricing_cache.clear()
     status = "archived" if archived else "unarchived"
     return {
         "message": f"Project '{project_id}' {status} successfully",
