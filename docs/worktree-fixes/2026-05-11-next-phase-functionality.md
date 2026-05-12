@@ -10,7 +10,7 @@
 ## Tracking Links
 
 - Issue: `https://github.com/jlicerio/velobid/issues/1`
-- PR: `https://github.com/jlicerio/velobid/pull/??` <!-- SET ON PR CREATE -->
+- PR: `https://github.com/jlicerio/velobid/pull/4`
 - Related docs: `docs/ai-chat-debugging-notes.md`, `docs/worktree-fixes/README.md`
 
 ## Problem Summary
