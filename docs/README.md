@@ -43,6 +43,17 @@ Checklists and audit notes from QA passes.
 
 ---
 
+## Worktree Fix Tracking
+
+Use this for ongoing fix/deploy/update execution notes tied to worktrees.
+
+| File | Purpose |
+|------|---------|
+| [worktree-fixes/README.md](worktree-fixes/README.md) | Process and conventions for fix logs tied to worktrees. |
+| [worktree-fixes/TEMPLATE.md](worktree-fixes/TEMPLATE.md) | Standard template for each new worktree fix record. |
+
+---
+
 ## Architecture
 
 Design docs and diagrams.
