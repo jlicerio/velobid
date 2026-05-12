@@ -2,6 +2,14 @@
 
 VeloBid is a Dockerized bid generation and Hermes-assisted estimating stack.
 
+## License and Usage
+
+VeloBid is provided under the [VeloBid Personal Use and Non-Commercial
+License v1.0](LICENSE). Personal and non-commercial use (evaluation,
+education, personal projects) is free. **Commercial use requires a separate
+written commercial license.** See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)
+for details and licensing inquiries.
+
 ## Current Paths
 
 VeloBid now has two container paths:
