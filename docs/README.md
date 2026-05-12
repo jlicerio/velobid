@@ -51,6 +51,7 @@ Use this for ongoing fix/deploy/update execution notes tied to worktrees.
 |------|---------|
 | [worktree-fixes/README.md](worktree-fixes/README.md) | Process and conventions for fix logs tied to worktrees. |
 | [worktree-fixes/TEMPLATE.md](worktree-fixes/TEMPLATE.md) | Standard template for each new worktree fix record. |
+| [worktree-fixes/2026-05-11-next-phase-functionality.md](worktree-fixes/2026-05-11-next-phase-functionality.md) | **Completed** — AI chat error handling (3 fixes) on `phase/next-functionality` branch. |
 
 ---
 

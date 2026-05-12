@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-05-12 — AI Chat Error Handling & Empty Response Detection
+
+Full session to harden AI chat error handling across the stack. Three fixes completed in commit `3bd75e4`.
+
+### 🟡 Medium — Fixed
+
+- **AI chat empty stream returns blank assistant message** (hermes-chat)
+  - `api/services/hermes_proxy.py` — added `had_meaningful_event` tracking; emits explicit SSE `error` event with `code: "empty_response"` when upstream returns `[DONE]` with zero content/thought/tool events.
+  - `frontend/src/components/chat/message-list.tsx`[sic] — `chat-store.tsx` now tracks `receivedMeaningfulEvent` per-stream; blank responses replaced with diagnostic text + retry hint.
+  - Commit: `3bd75e4`
+
+- **AI chat auth/config failures silently swallow errors** (agent-chat)
+  - `api/routers/agent_chat.py` — 6 specific OpenAI exception handlers (`AuthenticationError`, `RateLimitError`, `NotFoundError`, `BadRequestError`, `APIConnectionError`, `InternalServerError`) replace a single catch-all. Each returns an actionable SSE error event.
+  - Sensitive data (API keys, filesystem paths) redacted from error payloads via `_mask_api_key()`.
+  - Commit: `3bd75e4`
+
 ## 2026-05-10 — QA Audit Fixes
 
 Full UI/UX QA audit performed against `https://velobid.tailfceaca.ts.net/projects`.

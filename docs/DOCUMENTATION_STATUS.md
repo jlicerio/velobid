@@ -1,6 +1,6 @@
 # VeloBid Documentation Status
 
-Last updated: 2026-05-10
+Last updated: 2026-05-12
 
 ## What is current
 
@@ -43,6 +43,13 @@ The active workflow is split into two paths:
   - Confirms Kaban queue completion for 3 dashboard tasks
   - Documents OpenCode loop reliability fixes in `scripts/opencode-kaban-loop.ps1`
   - Confirms successful Docker redeploy on `selfsim@192.168.1.237` at `/home/selfsim/projects/velobid`
+
+- **AI chat error handling worktree fix:** `docs/worktree-fixes/2026-05-11-next-phase-functionality.md`
+  - Three fixes completed on `phase/next-functionality` branch (commit `3bd75e4`)
+  - Backend: auth/config error handling with masked secrets (`agent_chat.py`)
+  - Backend: empty SSE detection with explicit error event (`hermes_proxy.py`)
+  - Frontend: empty response diagnostic in chat UI (`chat-store.tsx`)
+  - See `CHANGELOG.md` for full details.
 
 ## What is archived
 
