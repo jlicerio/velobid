@@ -176,11 +176,26 @@ async def proxy_chat_to_hermes(
 
     async with httpx.AsyncClient(timeout=300) as client:
         async with client.stream("POST", url, json=payload, headers=headers) as resp:
+            if resp.status_code != 200:
+                try:
+                    error_body = await resp.aread()
+                    error_detail = json.loads(error_body).get("error", {}).get("message", str(error_body))
+                except Exception:
+                    error_detail = str(resp.status_code)
+                yield f"data: {json.dumps({'type': 'error', 'message': f'Upstream error {resp.status_code}: {error_detail}', 'status_code': resp.status_code})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+            saw_data = False
+            had_meaningful_event = False
             async for line in resp.aiter_lines():
                 if not line.startswith("data: "):
                     continue
+                saw_data = True
                 raw = line[len("data: "):].strip()
                 if raw == "[DONE]":
+                    if not had_meaningful_event:
+                        yield f"data: {json.dumps({'type': 'error', 'message': 'AI chat returned an empty response. This may indicate a configuration issue with the AI provider.', 'code': 'empty_response'})}\n\n"
                     yield "data: [DONE]\n\n"
                     return
                 try:
@@ -196,20 +211,29 @@ async def proxy_chat_to_hermes(
                 # Reasoning / thinking content (e.g. DeepSeek R1, Claude)
                 reasoning = delta.get("reasoning_content")
                 if reasoning:
+                    had_meaningful_event = True
                     yield f"data: {json.dumps({'type': 'thought', 'delta': reasoning})}\n\n"
 
                 # Regular content delta
                 content = delta.get("content")
                 if content:
+                    had_meaningful_event = True
                     yield f"data: {json.dumps({'type': 'content', 'delta': content})}\n\n"
 
                 # Tool calls from the assistant
                 tool_calls = delta.get("tool_calls")
                 if tool_calls:
+                    had_meaningful_event = True
                     for tc in tool_calls:
                         fn = tc.get("function", {})
                         yield f"data: {json.dumps({'type': 'tool_call', 'name': fn.get('name', 'unknown')})}\n\n"
 
                 if finish:
+                    if not had_meaningful_event:
+                        yield f"data: {json.dumps({'type': 'error', 'message': 'AI chat returned an empty response. This may indicate a configuration issue with the AI provider.', 'code': 'empty_response'})}\n\n"
                     yield "data: [DONE]\n\n"
                     return
+
+            if not saw_data:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'AI chat returned an empty response. This may indicate a configuration issue with the AI provider.', 'code': 'empty_response'})}\n\n"
+                yield "data: [DONE]\n\n"

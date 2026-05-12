@@ -1,9 +1,18 @@
 import asyncio
 import json
+import os
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import openai
+from openai import (
+    AuthenticationError,
+    RateLimitError,
+    APITimeoutError,
+    APIStatusError,
+    APIConnectionError,
+)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -93,6 +102,18 @@ def _build_rich_context(project_id: str, trade: str, bidder_id: str) -> str:
     return "\n".join(parts)
 
 
+def _error_event(code: str, message: str) -> str:
+    """Build an SSE error event with a user-actionable message and no secret details."""
+    return f"data: {json.dumps({'type': 'error', 'message': message, 'code': code})}\n\n"
+
+
+def _mask_api_key(raw: str | None) -> str | None:
+    """Mask all but the last 4 characters of an API key for safe logging."""
+    if not raw or len(raw) < 8:
+        return "***" if raw else None
+    return raw[:4] + "..." + raw[-4:]
+
+
 async def agent_stream_generator(
     messages: List[Dict[str, Any]], project_id: Optional[str], trade: str, bidder_id: str
 ):
@@ -110,6 +131,21 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
         messages.insert(0, {"role": "system", "content": system_prompt})
 
     max_iterations = 5
+
+    # Pre-flight: check required upstream configuration early
+    # so the user sees a clear error instead of an opaque OpenAI SDK exception.
+    api_key = os.getenv("OPENCODE_API_KEY")
+    base_url = os.getenv("OPENCODE_BASE_URL")
+    if not api_key or not api_key.strip():
+        print(f"CONFIG ERROR: OPENCODE_API_KEY is not set or is empty (masked={_mask_api_key(api_key)!r})")
+        yield _error_event("config_error", "AI chat is unavailable because the upstream AI service credentials are not configured. Please contact your system administrator.")
+        yield "data: [DONE]\n\n"
+        return
+    if not base_url or not base_url.strip():
+        print(f"CONFIG ERROR: OPENCODE_BASE_URL is not set or is empty")
+        yield _error_event("config_error", "AI chat is unavailable because the upstream AI service endpoint is not configured. Please contact your system administrator.")
+        yield "data: [DONE]\n\n"
+        return
 
     try:
         for i in range(max_iterations):
@@ -222,11 +258,65 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
 
         yield "data: [DONE]\n\n"
 
-    except Exception as e:
-        error_msg = f"Agent stream error: {str(e)}"
-        print(f"ERROR in agent_stream_generator: {error_msg}")
+    except AuthenticationError as e:
+        masked = _mask_api_key(os.getenv("OPENCODE_API_KEY"))
+        print(f"AUTH ERROR: API key rejected (masked={masked!r})")
         traceback.print_exc()
-        yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
+        yield _error_event("auth_error", "AI chat is unavailable because the API key was rejected. Please contact your system administrator.")
+        yield "data: [DONE]\n\n"
+
+    except RateLimitError:
+        print("RATE LIMIT: upstream AI service rate-limited the request")
+        traceback.print_exc()
+        yield _error_event("rate_limit", "AI chat is temporarily unavailable due to rate limiting. Please wait a moment and try again.")
+        yield "data: [DONE]\n\n"
+
+    except APITimeoutError:
+        print("TIMEOUT: upstream AI service timed out")
+        traceback.print_exc()
+        yield _error_event("timeout", "AI chat timed out. Please try again.")
+        yield "data: [DONE]\n\n"
+
+    except APIConnectionError as e:
+        print(f"CONNECTION ERROR: could not reach upstream AI service: {e}")
+        traceback.print_exc()
+        yield _error_event("connection_error", "AI chat is unavailable because the upstream AI service could not be reached. Please try again later.")
+        yield "data: [DONE]\n\n"
+
+    except APIStatusError as e:
+        # Catch other HTTP-level API errors (e.g. 400, 429, 500)
+        status = e.status_code
+        body = str(e.response.text) if hasattr(e, "response") and hasattr(e.response, "text") else ""
+        masked = _mask_api_key(os.getenv("OPENCODE_API_KEY"))
+        print(f"API ERROR (HTTP {status}): masked_key={masked!r} body={body!r}")
+        traceback.print_exc()
+        yield _error_event("api_error", f"AI chat returned an unexpected error (HTTP {status}). Please try again or contact support.")
+        yield "data: [DONE]\n\n"
+
+    except Exception as e:
+        # Catch-all: redact anything that looks like a secret before exposing to user
+        error_text = str(e)
+        # Patterns that might leak secrets, file paths, or internal config
+        redact_patterns = [
+            os.getenv("OPENCODE_API_KEY") or "",
+            os.getenv("OPENAI_API_KEY") or "",
+            os.getenv("ANTHROPIC_API_KEY") or "",
+            "/home/",
+            "/root/",
+            "/var/",
+            "/etc/",
+            "/tmp/",
+        ]
+        for pattern in redact_patterns:
+            if pattern and pattern in error_text:
+                error_text = error_text.replace(pattern, "[REDACTED]")
+
+        # Log the full error (with redacted secrets) to stdout for devs
+        masked = _mask_api_key(os.getenv("OPENCODE_API_KEY"))
+        print(f"UNEXPECTED ERROR in agent_stream_generator: masked_key={masked!r} error={error_text}")
+        traceback.print_exc()
+
+        yield _error_event("internal_error", "AI chat encountered an unexpected error. Please try again or contact support.")
         yield "data: [DONE]\n\n"
 
 

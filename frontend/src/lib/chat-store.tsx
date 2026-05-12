@@ -287,6 +287,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const decoder = new TextDecoder()
         let fullContent = ""
         let fullReasoning = ""
+        let receivedMeaningfulEvent = false
 
         while (true) {
           const { done, value } = await reader.read()
@@ -308,6 +309,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   const delta = data.choices[0]?.delta
                   if (delta) {
                     if (delta.content) {
+                      receivedMeaningfulEvent = true
                       fullContent += delta.content
                       dispatch({
                         type: "UPDATE_LAST_MESSAGE",
@@ -316,6 +318,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       })
                     }
                     if (delta.reasoning_content) {
+                      receivedMeaningfulEvent = true
                       fullReasoning += delta.reasoning_content
                       dispatch({
                         type: "UPDATE_LAST_MESSAGE",
@@ -329,6 +332,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 // Handle custom Hermes format (type field)
                 else if (data.type) {
                   if (data.type === "content") {
+                    receivedMeaningfulEvent = true
                     fullContent += data.delta
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
@@ -336,6 +340,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       content: fullContent,
                     })
                   } else if (data.type === "thought") {
+                    receivedMeaningfulEvent = true
                     fullReasoning += data.delta
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
@@ -344,18 +349,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       reasoningContent: data.delta,
                     })
                   } else if (data.type === "tool_call") {
+                    receivedMeaningfulEvent = true
                     dispatch({
                       type: "ADD_TOOL_CALL",
                       sessionId,
                       call: { name: data.name },
                     })
                   } else if (data.type === "tool_result") {
+                    receivedMeaningfulEvent = true
                     dispatch({
                       type: "ADD_TOOL_CALL",
                       sessionId,
                       call: { name: data.name, result: data.result },
                     })
                   } else if (data.type === "error") {
+                    receivedMeaningfulEvent = true
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
                       sessionId,
@@ -368,6 +376,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
             }
           }
+        }
+
+        // If the stream ended ([DONE]) without delivering any meaningful content,
+        // update the assistant message with a diagnostic.
+        if (!receivedMeaningfulEvent) {
+          dispatch({
+            type: "UPDATE_LAST_MESSAGE",
+            sessionId,
+            content:
+              "The AI assistant returned an empty response. This may indicate a temporary issue with the AI service. Please try again.",
+          })
         }
       } catch (err: any) {
         if (err.name !== "AbortError") {
