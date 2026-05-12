@@ -1,10 +1,13 @@
 import json
 import os
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pdfplumber
+from pypdf import PdfReader
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -115,6 +118,88 @@ def generate_pdfs_tool(project_id: str, trade: str, package: str = "all") -> str
         return f"Generation failed: {str(e)}"
 
 
+def inspect_pdf_layout(file_path: str, max_pages: int = 3) -> str:
+    """Run lightweight PDF layout QA by rendering pages and checking dimensions."""
+    full_path = PROJECT_ROOT / file_path
+    if not full_path.exists():
+        alt_path = PROJECT_ROOT / "source_packages" / file_path
+        full_path = alt_path if alt_path.exists() else full_path
+
+    if not full_path.exists():
+        return f"File not found: {file_path}"
+
+    if full_path.suffix.lower() != ".pdf":
+        return f"Unsupported file type for layout inspection: {full_path.suffix}"
+
+    try:
+        reader = PdfReader(str(full_path))
+        page_count = len(reader.pages)
+    except Exception as e:
+        return f"Error opening PDF: {str(e)}"
+
+    pages_to_render = max(1, min(max_pages, page_count))
+    pdftoppm_path = shutil.which("pdftoppm")
+
+    report = [
+        f"PDF: {full_path}",
+        f"Pages: {page_count}",
+        f"Inspected pages: 1-{pages_to_render}",
+    ]
+
+    # Always include page size sanity checks, even if pdftoppm is missing.
+    size_flags = []
+    for idx in range(pages_to_render):
+        page = reader.pages[idx]
+        w = float(page.mediabox.width)
+        h = float(page.mediabox.height)
+        if w <= 0 or h <= 0:
+            size_flags.append(f"Page {idx + 1} has non-positive dimensions ({w} x {h})")
+    if size_flags:
+        report.append("Dimension warnings:")
+        report.extend(size_flags)
+
+    if not pdftoppm_path:
+        report.append("Render status: skipped (pdftoppm not installed)")
+        report.append("Install Poppler to enable visual render QA.")
+        return "\n".join(report)
+
+    render_dir = PROJECT_ROOT / "tmp" / "pdf_renders"
+    render_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_stem = re.sub(r"[^A-Za-z0-9_-]+", "_", full_path.stem)
+    prefix = render_dir / f"{safe_stem}_p"
+
+    cmd = [
+        pdftoppm_path,
+        "-f",
+        "1",
+        "-l",
+        str(pages_to_render),
+        "-png",
+        str(full_path),
+        str(prefix),
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or "").strip()
+        return f"Render failed for {full_path.name}: {stderr or str(e)}"
+
+    images = sorted(render_dir.glob(f"{safe_stem}_p-*.png"))
+    if not images:
+        report.append("Render status: failed (no PNG output files found)")
+        return "\n".join(report)
+
+    report.append(f"Render status: success ({len(images)} page PNGs)")
+    report.append("Rendered files:")
+    report.extend([str(img.relative_to(PROJECT_ROOT)) for img in images])
+    report.append(
+        "Manual QA checklist: review for clipped text, overlaps, broken tables, and unreadable glyphs."
+    )
+    return "\n".join(report)
+
+
 def calculate_takeoff_total(items: List[Dict[str, Any]]) -> str:
     """Calculate totals for a list of takeoff items (quantity * unit_cost)."""
     try:
@@ -216,7 +301,7 @@ TOOLS = [
                     "items": {
                         "type": "array",
                         "items": {
-                            "type": "object",
+                        "type": "object",
                             "properties": {
                                 "name": {"type": "string"},
                                 "quantity": {"type": "number"},
@@ -226,6 +311,27 @@ TOOLS = [
                     }
                 },
                 "required": ["items"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "inspect_pdf_layout",
+            "description": "Render a PDF to page images and run basic layout QA checks.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the PDF. Supports root-relative or source_packages-relative paths.",
+                    },
+                    "max_pages": {
+                        "type": "integer",
+                        "description": "How many pages to inspect from the beginning (default 3).",
+                    },
+                },
+                "required": ["file_path"],
             },
         },
     },
@@ -281,6 +387,8 @@ def handle_tool_call(tool_call) -> str:
         return generate_pdfs_tool(args["project_id"], args["trade"], args.get("package", "all"))
     elif name == "calculate_takeoff":
         return calculate_takeoff_total(args["items"])
+    elif name == "inspect_pdf_layout":
+        return inspect_pdf_layout(args["file_path"], args.get("max_pages", 3))
     elif name == "search_web":
         return search_web_tool(args["query"])
 
