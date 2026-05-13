@@ -1,0 +1,32 @@
+/*
+ * Small post-build hardening layer for the checked-in static bundle.
+ * The live frontend source should own these rules once it is restored.
+ */
+
+@media (max-width: 640px) {
+  header.h-14 {
+    height: auto;
+    min-height: 3.5rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  header.h-14 > div {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  header.h-14 > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  header.h-14 button,
+  header.h-14 a,
+  header.h-14 .text-sm {
+    white-space: nowrap;
+  }
+}
