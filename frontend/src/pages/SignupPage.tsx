@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -15,8 +15,8 @@ const signupSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").max(128),
   phone: z.string().max(30).optional().or(z.literal("")),
   location: z.string().max(200).optional().or(z.literal("")),
-  accept_terms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the terms and conditions" }),
+  accept_terms: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions",
   }),
 })
 
@@ -30,13 +30,11 @@ interface ConfirmationState {
 
 export function SignupPage() {
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null)
-  const navigate = useNavigate()
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    setError,
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -46,7 +44,7 @@ export function SignupPage() {
       password: "",
       phone: "",
       location: "",
-      accept_terms: false as unknown as true,
+      accept_terms: false,
     },
   })
 
