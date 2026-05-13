@@ -313,3 +313,47 @@ def generate_recovery_codes(count: int = 8) -> list[str]:
         A list of recovery code strings.
     """
     return [_generate_readable_code() for _ in range(count)]
+
+
+# ---------------------------------------------------------------------------
+# Cloudflare Turnstile verification
+# ---------------------------------------------------------------------------
+
+
+_TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+_TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+
+
+async def verify_turnstile_token(token: str | None) -> bool:
+    """Verify a Cloudflare Turnstile widget token against the siteverify API.
+
+    Returns ``True`` when the token is valid.  Returns ``True`` if
+    ``TURNSTILE_SECRET_KEY`` is not configured (dev-mode passthrough).
+
+    Parameters
+    ----------
+    token
+        The ``cf-turnstile-response`` value submitted by the client.
+    """
+    if not _TURNSTILE_SECRET_KEY:
+        # Dev-mode passthrough — no key configured, skip verification
+        return True
+
+    if not token:
+        return False
+
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                _TURNSTILE_VERIFY_URL,
+                data={
+                    "secret": _TURNSTILE_SECRET_KEY,
+                    "response": token,
+                },
+            )
+            result = resp.json()
+            return bool(result.get("success", False))
+    except Exception:
+        return False

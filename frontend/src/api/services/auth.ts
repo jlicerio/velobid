@@ -9,6 +9,7 @@ export interface SignupStartRequest {
   phone?: string | null
   location?: string | null
   accept_terms: boolean
+  cf_turnstile_token?: string | null
 }
 
 export interface SignupStartResponse {

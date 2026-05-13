@@ -53,9 +53,9 @@ router = APIRouter(prefix="/api/v1", tags=["auth"])
     response_model=SignupStartResponse,
     status_code=201,
 )
-def signup_start(request: SignupStartRequest) -> SignupStartResponse:
+async def signup_start(request: SignupStartRequest) -> SignupStartResponse:
     """Initiate a new signup — creates org, admin user, and sends verification email."""
-    return auth_service.start_signup(request)
+    return await auth_service.start_signup(request)
 
 
 @router.post(

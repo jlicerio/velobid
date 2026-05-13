@@ -53,6 +53,11 @@ class SignupStartRequest(BaseModel):
     phone: str | None = Field(None, max_length=30, examples=["+1 (956) 586-2118"])
     location: str | None = Field(None, max_length=200, examples=["McAllen, TX"])
     accept_terms: bool = Field(..., description="Must accept terms to proceed")
+    cf_turnstile_token: str | None = Field(
+        None,
+        max_length=2048,
+        description="Cloudflare Turnstile widget token for abuse protection",
+    )
 
     @field_validator("accept_terms")
     @classmethod

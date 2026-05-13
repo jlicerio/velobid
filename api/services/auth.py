@@ -37,6 +37,7 @@ from api.services.security import (
     hash_password,
     verify_password,
     verify_totp_code,
+    verify_turnstile_token,
     verify_verification_token,
 )
 
@@ -95,16 +96,24 @@ def _remove_signup(signup: PendingSignup) -> None:
 # ---------------------------------------------------------------------------
 
 
-def start_signup(request: SignupStartRequest) -> SignupStartResponse:
+async def start_signup(request: SignupStartRequest) -> SignupStartResponse:
     """Initiate the signup flow.
 
-    1. Reject duplicate registrations (same email).
-    2. Hash the provided password.
-    3. Create a ``PendingSignup`` record with fresh UUIDs.
-    4. Generate an email-verification JWT and store its hash.
-    5. Persist to the in-memory store.
-    6. Dispatch the verification email (logged to console for MVP).
+    1. Verify Cloudflare Turnstile token (anti-bot).
+    2. Reject duplicate registrations (same email).
+    3. Hash the provided password.
+    4. Create a ``PendingSignup`` record with fresh UUIDs.
+    5. Generate an email-verification JWT and store its hash.
+    6. Persist to the in-memory store.
+    7. Dispatch the verification email (logged to console for MVP).
     """
+    # 0. Verify Turnstile token
+    if not await verify_turnstile_token(request.cf_turnstile_token):
+        raise HTTPException(
+            status_code=400,
+            detail="Security check failed. Please try again.",
+        )
+
     # 1. Check for duplicates
     existing = get_pending_signup_by_email(str(request.admin_email))
     if existing is not None:
