@@ -9,11 +9,12 @@ from fastapi.staticfiles import StaticFiles
 
 from api.routers.agent_chat import router as agent_router
 from api.routers.ai import router as ai_router
+from api.routers.auth import router as auth_router
 from api.routers.bids import router as bids_router
+from api.routers.blueprints import router as blueprints_router
 from api.routers.files import router as files_router
 from api.routers.sync import router as sync_router
 from api.routers.versions import router as versions_router
-from api.routers.blueprints import router as blueprints_router
 from api.routers.vision import router as vision_router
 from api.services.bids import BID_PROJECTS_DIR, PROJECT_ROOT
 
@@ -41,6 +42,7 @@ app.include_router(agent_router)
 app.include_router(versions_router)
 app.include_router(vision_router)
 app.include_router(blueprints_router)
+app.include_router(auth_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=BID_PROJECTS_DIR), name="files")
 
@@ -58,4 +60,3 @@ def meta() -> dict[str, str]:
         "project_root": str(PROJECT_ROOT),
         "bid_projects_dir": str(BID_PROJECTS_DIR),
     }
-
