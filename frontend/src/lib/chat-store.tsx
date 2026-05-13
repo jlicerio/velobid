@@ -2,6 +2,11 @@ import React, { createContext, useContext, useReducer, useCallback } from "react
 import type { ChatMessage, ChatSession } from "./types"
 import { sendChatMessage } from "@/api/services/chat"
 import { fetchProjectsWithPricing } from "@/api/services/projects"
+import {
+  buildDashboardContext,
+  loadDashboardSnapshot,
+  type DashboardSnapshot,
+} from "@/lib/dashboard-context"
 
 /* ─── State ─── */
 
@@ -11,6 +16,7 @@ interface ChatState {
   isStreaming: boolean
   projectId: string | null
   bidderId: string | null
+  dashboardSnapshot: DashboardSnapshot | null
 }
 
 type Action =
@@ -23,6 +29,7 @@ type Action =
   | { type: "ADD_TOOL_CALL"; sessionId: string; call: { name: string; result?: string } }
   | { type: "SET_STREAMING"; value: boolean }
   | { type: "SET_BIDDER"; id: string }
+  | { type: "SET_DASHBOARD_SNAPSHOT"; snapshot: DashboardSnapshot | null }
 
 function chatReducer(state: ChatState, action: Action): ChatState {
   switch (action.type) {
@@ -86,6 +93,8 @@ function chatReducer(state: ChatState, action: Action): ChatState {
       return { ...state, isStreaming: action.value }
     case "SET_BIDDER":
       return { ...state, bidderId: action.id }
+    case "SET_DASHBOARD_SNAPSHOT":
+      return { ...state, dashboardSnapshot: action.snapshot }
     default:
       return state
   }
@@ -116,18 +125,35 @@ async function buildProjectContext(projectId?: string | null): Promise<string | 
     const project = projects.find((p) => p.id === projectId)
     if (!project) return null
 
+    const location = [project.city, project.state].filter(Boolean).join(", ")
     const lines = [
-      "PROJECT CONTEXT:",
-      `- Project: ${project.name}`,
-      `${project.city || project.state ? `- Location: ${project.city || ""}${project.city && project.state ? ", " : ""}${project.state || ""}` : ""}`.trim(),
-      `- Trade: ${project.trade || "unknown"}`,
-      project.total_bid != null ? `- Current bid total: $${project.total_bid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Current bid total: unavailable",
-      project.total_labor_hours != null ? `- Labor hours: ${project.total_labor_hours.toLocaleString()} hrs` : "- Labor hours: unavailable",
-      project.total_labor != null ? `- Labor cost: $${project.total_labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Labor cost: unavailable",
-      project.total_material != null ? `- Material cost: $${project.total_material.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "- Material cost: unavailable",
-      project.area_sf != null ? `- Area: ${project.area_sf.toLocaleString()} SF` : "- Area: unavailable",
+      "# Project Context",
       "",
-      "Use the project context above when answering questions about the current bid, especially bid total, labor hours, material cost, and scope. If the user asks for the current bid total, answer with the current bid total. If they ask for labor hours, answer with the labor hours.",
+      `- Project: ${project.name}`,
+      location ? `- Location: ${location}` : null,
+      `- Trade: ${project.trade || "unknown"}`,
+      "",
+      "## Bid Snapshot",
+      project.total_bid != null
+        ? `- Current bid total: $${project.total_bid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "- Current bid total: unavailable",
+      project.total_labor_hours != null
+        ? `- Labor hours: ${project.total_labor_hours.toLocaleString()} hrs`
+        : "- Labor hours: unavailable",
+      project.total_labor != null
+        ? `- Labor cost: $${project.total_labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "- Labor cost: unavailable",
+      project.total_material != null
+        ? `- Material cost: $${project.total_material.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "- Material cost: unavailable",
+      project.area_sf != null
+        ? `- Area: ${project.area_sf.toLocaleString()} SF`
+        : "- Area: unavailable",
+      "",
+      "## Guidance",
+      "Use the project context above when answering questions about the current bid, especially bid total, labor hours, material cost, and scope.",
+      "If the user asks for the current bid total, answer with the current bid total.",
+      "If they ask for labor hours, answer with the labor hours.",
     ]
 
     return lines.filter(Boolean).join("\n")
@@ -145,6 +171,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isStreaming: false,
     projectId: null,
     bidderId: null,
+    dashboardSnapshot: null,
   })
 
   let abortControllerRef = React.useRef<AbortController | null>(null)
@@ -204,12 +231,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const hasProjectContext = Boolean(session.projectId || state.projectId)
-        const projectContext = hasProjectContext
-          ? null
-          : await buildProjectContext(session.projectId || state.projectId || null)
-        const outboundMessages = projectContext
-          ? [{ role: "system", content: projectContext }, ...historyMessages]
-          : historyMessages
+        let outboundMessages = historyMessages
+
+        if (hasProjectContext) {
+          const projectContext = await buildProjectContext(
+            session.projectId || state.projectId || null,
+          )
+          if (projectContext) {
+            outboundMessages = [{ role: "system", content: projectContext }, ...historyMessages]
+          }
+        } else {
+          const dashboardSnapshot =
+            state.dashboardSnapshot ?? (await loadDashboardSnapshot())
+
+          if (dashboardSnapshot) {
+            if (!state.dashboardSnapshot) {
+              dispatch({ type: "SET_DASHBOARD_SNAPSHOT", snapshot: dashboardSnapshot })
+            }
+
+            outboundMessages = [
+              { role: "system", content: buildDashboardContext(dashboardSnapshot) },
+              ...historyMessages,
+            ]
+          }
+        }
 
         const response = await sendChatMessage(
           outboundMessages,
@@ -242,6 +287,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const decoder = new TextDecoder()
         let fullContent = ""
         let fullReasoning = ""
+        let receivedMeaningfulEvent = false
 
         while (true) {
           const { done, value } = await reader.read()
@@ -263,6 +309,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   const delta = data.choices[0]?.delta
                   if (delta) {
                     if (delta.content) {
+                      receivedMeaningfulEvent = true
                       fullContent += delta.content
                       dispatch({
                         type: "UPDATE_LAST_MESSAGE",
@@ -271,6 +318,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       })
                     }
                     if (delta.reasoning_content) {
+                      receivedMeaningfulEvent = true
                       fullReasoning += delta.reasoning_content
                       dispatch({
                         type: "UPDATE_LAST_MESSAGE",
@@ -284,6 +332,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 // Handle custom Hermes format (type field)
                 else if (data.type) {
                   if (data.type === "content") {
+                    receivedMeaningfulEvent = true
                     fullContent += data.delta
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
@@ -291,6 +340,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       content: fullContent,
                     })
                   } else if (data.type === "thought") {
+                    receivedMeaningfulEvent = true
                     fullReasoning += data.delta
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
@@ -299,18 +349,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                       reasoningContent: data.delta,
                     })
                   } else if (data.type === "tool_call") {
+                    receivedMeaningfulEvent = true
                     dispatch({
                       type: "ADD_TOOL_CALL",
                       sessionId,
                       call: { name: data.name },
                     })
                   } else if (data.type === "tool_result") {
+                    receivedMeaningfulEvent = true
                     dispatch({
                       type: "ADD_TOOL_CALL",
                       sessionId,
                       call: { name: data.name, result: data.result },
                     })
                   } else if (data.type === "error") {
+                    receivedMeaningfulEvent = true
                     dispatch({
                       type: "UPDATE_LAST_MESSAGE",
                       sessionId,
@@ -323,6 +376,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
             }
           }
+        }
+
+        // If the stream ended ([DONE]) without delivering any meaningful content,
+        // update the assistant message with a diagnostic.
+        if (!receivedMeaningfulEvent) {
+          dispatch({
+            type: "UPDATE_LAST_MESSAGE",
+            sessionId,
+            content:
+              "The AI assistant returned an empty response. This may indicate a temporary issue with the AI service. Please try again.",
+          })
         }
       } catch (err: any) {
         if (err.name !== "AbortError") {
@@ -337,7 +401,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         abortControllerRef.current = null
       }
     },
-    [state.currentSessionId, state.projectId, state.sessions, state.bidderId]
+    [
+      state.currentSessionId,
+      state.projectId,
+      state.sessions,
+      state.bidderId,
+      state.dashboardSnapshot,
+    ]
   )
 
   const stopStreaming = useCallback(() => {

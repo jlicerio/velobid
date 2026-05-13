@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { useChat } from "@/lib/chat-store";
 import { logout } from "@/api/services/auth";
-import { fetchProjectsWithPricing } from "@/api/services/projects";
+import { loadDashboardSnapshot } from "@/lib/dashboard-context";
 
 const navItems = [
   { to: "/projects", label: "Projects", icon: "📋" },
@@ -54,104 +54,54 @@ export function AppShell() {
     // Set project context in store
     dispatch({ type: "SET_PROJECT", id: currentProjectId || "" });
 
-    // Find existing session for this context, or create one
+    // Find existing session for this context, or create one.
+    // We read state.sessions inside the effect but it is NOT in the dependency
+    // array intentionally — we only want to react to currentProjectId changes.
+    // The sessions value here is from the render that triggered this effect.
     const sessions = Object.values(state.sessions);
     const matchingSession = sessions.find(
-      (s) => s.projectId === (currentProjectId || "")
+      (s) => s.projectId === (currentProjectId || ""),
     );
 
     if (matchingSession) {
-      dispatch({ type: "SET_SESSION", id: matchingSession.id });
+      // Switch to the existing session for this context
+      if (state.currentSessionId !== matchingSession.id) {
+        dispatch({ type: "SET_SESSION", id: matchingSession.id });
+      }
     } else {
-      // Create a new session for this context
+      // Create a new session for this context only if we don't already have
+      // a session with this projectId (prevents duplicates from race conditions)
       const newSessionId = createSession(currentProjectId || undefined);
       dispatch({ type: "SET_SESSION", id: newSessionId });
     }
   }, [currentProjectId]);
 
   useEffect(() => {
-    if (currentProjectId) return;
-
     let cancelled = false;
 
-    async function injectDashboardContext() {
-      const sessionId = state.currentSessionId;
-      if (!sessionId) return;
+    if (currentProjectId) {
+      dispatch({ type: "SET_DASHBOARD_SNAPSHOT", snapshot: null });
+      return;
+    }
 
-      const session = state.sessions[sessionId];
-      const hasDashboardContext = session?.messages.some(
-        (message) =>
-          message.role === "system" &&
-          message.content.includes("[dashboard-context]"),
-      );
-
-      if (hasDashboardContext) return;
-
+    async function loadSnapshot() {
       try {
-        const projects = await fetchProjectsWithPricing();
+        const snapshot = await loadDashboardSnapshot();
         if (cancelled) return;
-
-        const active = projects.filter((p) => !p.archived);
-        const archived = projects.filter((p) => p.archived);
-        const totalBid = projects.reduce((sum, p) => sum + (p.total_bid || 0), 0);
-        const totalLaborHours = projects.reduce(
-          (sum, p) => sum + (p.total_labor_hours || 0),
-          0,
-        );
-        const totalMaterial = projects.reduce(
-          (sum, p) => sum + (p.total_material || 0),
-          0,
-        );
-
-        const topProjects = [...projects]
-          .sort((a, b) => (b.total_bid || 0) - (a.total_bid || 0))
-          .slice(0, 5)
-          .map(
-            (project) =>
-              `- ${project.name} | ${project.trade || "unknown"} | ${project.city || "?"}, ${project.state || "?"} | bid ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(project.total_bid || 0)} | labor ${project.total_labor_hours?.toLocaleString() ?? "—"} hrs`,
-          );
-
-        const dashboardContext = [
-          "[dashboard-context] You are helping the user manage the full VeloBid projects dashboard.",
-          "Answer using the portfolio context below when the user asks about projects, totals, status, labor hours, or management actions.",
-          "",
-          `Portfolio summary: ${projects.length} projects total, ${active.length} active, ${archived.length} archived.`,
-          `Portfolio totals: bid ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalBid)}, labor hours ${totalLaborHours.toLocaleString(undefined, { maximumFractionDigits: 1 })}, materials ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalMaterial)}.`,
-          "",
-          "Available dashboard tools:",
-          "- Search and filter projects",
-          "- Sort by name, bid value, labor cost, labor hours, or area",
-          "- Archive or unarchive a project",
-          "- Open a project to review line items and detailed bid data",
-          "- Refresh the portfolio totals",
-          "",
-          "Top projects:",
-          ...topProjects,
-          "",
-          "If the user asks for an overview, summarize the portfolio. If they ask for a project-specific detail, ask which project they mean or use the best matching project from the current view.",
-        ].join("\n");
-
-        dispatch({
-          type: "ADD_MESSAGE",
-          sessionId,
-          message: {
-            id: `dashboard-context-${Date.now()}`,
-            role: "system",
-            content: dashboardContext,
-            timestamp: Date.now(),
-          },
-        });
+        dispatch({ type: "SET_DASHBOARD_SNAPSHOT", snapshot });
       } catch {
-        // Dashboard context is helpful, but never block the UI if the fetch fails.
+        if (!cancelled) {
+          dispatch({ type: "SET_DASHBOARD_SNAPSHOT", snapshot: null });
+        }
       }
     }
 
-    void injectDashboardContext();
+    void loadSnapshot();
 
     return () => {
       cancelled = true;
     };
-  }, [currentProjectId, state.currentSessionId, state.sessions, dispatch]);
+  }, [currentProjectId, dispatch]);
 
   // Resize handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -159,10 +109,13 @@ export function AppShell() {
     setIsResizing(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
-    setSidebarWidth(Math.max(320, Math.min(800, e.clientX)));
-  }, [isResizing]);
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
+      setSidebarWidth(Math.max(320, Math.min(800, e.clientX)));
+    },
+    [isResizing],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -194,7 +147,7 @@ export function AppShell() {
           isMobile
             ? "fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[400px] transition-transform duration-200"
             : "relative shrink-0",
-          isMobile && !sidebarOpen && "hidden"
+          isMobile && !sidebarOpen && "hidden",
         )}
       >
         <div className="h-12 border-b flex items-center px-4 gap-2 shrink-0">
@@ -207,8 +160,9 @@ export function AppShell() {
               ←
             </button>
           )}
-          <span className="text-base">💬</span>
-          <span className="text-sm font-semibold">AI Assistant</span>
+          <span className="text-sm font-semibold tracking-tight text-primary">
+            VeloBid
+          </span>
           {currentProjectId && (
             <span className="ml-auto text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full truncate max-w-[120px]">
               {currentProjectId}
@@ -260,7 +214,7 @@ export function AppShell() {
                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )
                 }
               >
@@ -270,7 +224,9 @@ export function AppShell() {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             {currentProjectId ? (
-              <span className="text-primary font-medium text-xs">Project view</span>
+              <span className="text-primary font-medium text-xs">
+                Project view
+              </span>
             ) : (
               <span className="text-xs text-muted-foreground">Dashboard</span>
             )}

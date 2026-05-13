@@ -6,16 +6,26 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Send, Mic, Square } from "lucide-react"
 
 export function MessageInput() {
-  const { sendMessage, stopStreaming, state } = useChat()
+  const { sendMessage, stopStreaming, state, currentSession } = useChat()
   const [text, setText] = useState("")
   const [isListening, setIsListening] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const placeholder = currentSession?.projectId
+    ? "Ask about the project..."
+    : "Ask about the portfolio..."
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = text.trim()
     if (!trimmed || state.isStreaming) return
     setText("")
-    sendMessage(trimmed)
+    setError(null)
+    try {
+      await sendMessage(trimmed)
+    } catch (err: any) {
+      setText(trimmed)
+      setError(err?.message || "Failed to send message")
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -75,7 +85,7 @@ export function MessageInput() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about the project..."
+            placeholder={placeholder}
             className="pr-10"
             disabled={state.isStreaming}
           />
@@ -119,6 +129,19 @@ export function MessageInput() {
           </Tooltip>
         )}
       </div>
+      {/* Error banner */}
+      {error && (
+        <div className="mt-2 flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-600 font-bold text-lg leading-none"
+            aria-label="Dismiss error"
+          >
+            &times;
+          </button>
+        </div>
+      )}
     </div>
   )
 }
