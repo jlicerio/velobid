@@ -52,6 +52,28 @@ jobs:
           git fetch --all --prune
           git checkout "$DEPLOY_REF"
           git reset --hard "origin/$DEPLOY_REF" || true
+
+      - name: Build frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          if [[ -d frontend ]]; then
+            npm --prefix frontend install
+            npm --prefix frontend run build
+            cp -f frontend/dist/index.html api/static/index.html
+            rm -rf api/static/assets/*
+            cp -r frontend/dist/assets/* api/static/assets/
+            echo "Frontend built and copied to api/static/"
+          else
+            echo "No frontend directory, skipping frontend build"
+          fi
+
+      - name: Build and restart containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
           docker compose pull || true
           docker compose up -d --build
 
