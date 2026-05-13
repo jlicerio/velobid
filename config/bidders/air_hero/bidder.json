@@ -5,5 +5,12 @@
   "phone": "(956) 586-2118",
   "location": "McAllen, TX",
   "trade_domain": "Mechanical / HVAC",
-  "operating_region": "McAllen, Texas / Hidalgo County"
+  "operating_region": "McAllen, Texas / Hidalgo County",
+  "billing": {
+    "trial_started_at": "2026-05-13T19:47:52Z",
+    "trial_ends_at": "2026-05-27T19:47:52Z",
+    "subscription_status": "local_trial",
+    "last_event_type": "trial.started",
+    "updated_at": "2026-05-13T19:47:52Z"
+  }
 }
