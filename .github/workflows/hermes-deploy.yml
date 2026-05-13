@@ -1,0 +1,63 @@
+name: Hermes Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: "Branch, tag, or SHA to deploy"
+        required: false
+        default: "main"
+      environment:
+        description: "Target environment"
+        required: false
+        default: "production"
+  push:
+    branches:
+      - main
+      - "feat/**"
+
+concurrency:
+  group: hermes-deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-via-hermes:
+    name: Deploy On Linux (Hermes Runner)
+    runs-on: [self-hosted, linux, hermes]
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    permissions:
+      contents: read
+    env:
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      DEPLOY_REF: ${{ github.event.inputs.deploy_ref || github.ref_name }}
+    steps:
+      - name: Validate deploy path
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${DEPLOY_PATH:-}" ]]; then
+            echo "Repository variable DEPLOY_PATH is required."
+            exit 1
+          fi
+          if [[ ! -d "$DEPLOY_PATH/.git" ]]; then
+            echo "DEPLOY_PATH must be an existing git repo on Hermes host: $DEPLOY_PATH"
+            exit 1
+          fi
+
+      - name: Deploy selected ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          git fetch --all --prune
+          git checkout "$DEPLOY_REF"
+          git reset --hard "origin/$DEPLOY_REF" || true
+          docker compose pull || true
+          docker compose up -d --build
+
+      - name: Show service status
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          docker compose ps
