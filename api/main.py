@@ -1,4 +1,4 @@
-﻿"""FastAPI application entrypoint for the Velobid UI/API."""
+"""FastAPI application entrypoint for the Velobid UI/API."""
 
 from pathlib import Path
 
