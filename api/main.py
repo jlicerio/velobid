@@ -1,5 +1,6 @@
 ﻿"""FastAPI application entrypoint for the Velobid UI/API."""
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -19,6 +20,12 @@ from api.routers.vision import router as vision_router
 from api.services.bids import BID_PROJECTS_DIR, PROJECT_ROOT
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
 
 app = FastAPI(
     title="Velobid API",

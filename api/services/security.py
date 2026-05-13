@@ -22,7 +22,10 @@ from qrcode.image.svg import SvgPathImage
 
 _JWT_SECRET_KEY = os.getenv(
     "JWT_SECRET_KEY",
-    "velobid-dev-jwt-secret-change-in-production",
+    os.getenv(
+        "JWT_SECRET",
+        "velobid-dev-jwt-secret-change-in-production",
+    ),
 )
 _ENCRYPTION_KEY = os.getenv(
     "ENCRYPTION_KEY",

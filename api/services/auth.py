@@ -334,6 +334,8 @@ def login(email: str, password: str) -> LoginResponse:
     * ``pending_email_verification`` -> 403
     * ``email_verified_pending_2fa``  -> returns a ``2fa_challenge`` temp token
     * ``active``                      -> returns access/refresh tokens directly
+      unless two-factor authentication is enabled, in which case it returns a
+      ``2fa_challenge`` temp token.
     """
     # 1. Look up the user
     signup = get_pending_signup_by_email(email)
@@ -357,7 +359,7 @@ def login(email: str, password: str) -> LoginResponse:
             detail="Email not verified",
         )
 
-    if signup.status == UserStatus.email_verified_pending_2fa:
+    def build_2fa_challenge_response() -> LoginResponse:
         temp_token = create_access_token(
             subject=signup.admin_user_id,
             extra_claims={"type": "2fa_challenge"},
@@ -370,6 +372,12 @@ def login(email: str, password: str) -> LoginResponse:
             email=signup.admin_email,
             status=signup.status,
         )
+
+    if signup.status == UserStatus.email_verified_pending_2fa:
+        return build_2fa_challenge_response()
+
+    if signup.status == UserStatus.active and signup.two_factor_enabled:
+        return build_2fa_challenge_response()
 
     if signup.status == UserStatus.active:
         access_token = create_access_token(subject=signup.admin_user_id)
