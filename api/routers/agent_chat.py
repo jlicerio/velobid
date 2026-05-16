@@ -11,9 +11,13 @@ from pydantic import BaseModel
 from api.schemas.bids import GenerateBidRequest
 from api.services.agent import TOOLS, client, handle_tool_call
 from api.services.agent_access import AgentAccessError, enforce_agent_access
-from api.services.auth_guard import AuthContext, get_auth_context
 from api.services.agent_model_policy import resolve_agent_model_policy
+from api.services.auth_guard import AuthContext, get_auth_context
 from api.services.bids import OUTPUT_DIR, preview_bid, read_json, resolve_project_path
+from api.services.integrations.composio import (
+    execute_tool_for_bidder,
+    get_tools_for_bidder,
+)
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
 
@@ -40,9 +44,13 @@ def _build_rich_context(project_id: str, trade: str, bidder_id: str) -> str:
         project_authorized = True
         config = read_json(path)
         parts.append(f"**Project**: {config.get('name', project_id)}")
-        parts.append(f"**Location**: {config.get('city', 'N/A')}, {config.get('state', 'N/A')}")
+        parts.append(
+            f"**Location**: {config.get('city', 'N/A')}, {config.get('state', 'N/A')}"
+        )
         parts.append(f"**Area**: {config.get('total_area_sf', 'N/A')} SF")
-        parts.append(f"**Type**: {config.get('construction_type', 'N/A')} / {config.get('occupancy_group', 'N/A')}")
+        parts.append(
+            f"**Type**: {config.get('construction_type', 'N/A')} / {config.get('occupancy_group', 'N/A')}"
+        )
         parts.append(f"**Trade**: {trade}")
     except Exception:
         parts.append(f"**Project ID**: {project_id}")
@@ -59,14 +67,20 @@ def _build_rich_context(project_id: str, trade: str, bidder_id: str) -> str:
         parts.append(f"  - Total Material: ${preview.totals.total_material:,.2f}")
         parts.append(f"  - Total Labor: ${preview.totals.total_labor:,.2f}")
         parts.append(f"  - Direct Cost: ${preview.totals.total_direct_cost:,.2f}")
-        parts.append(f"  - Contingency: ${preview.totals.contingency:,.2f} ({preview.totals.contingency_pct}%)")
-        parts.append(f"  - Overhead & Profit: ${preview.totals.overhead_profit:,.2f} ({preview.totals.overhead_profit_pct}%)")
+        parts.append(
+            f"  - Contingency: ${preview.totals.contingency:,.2f} ({preview.totals.contingency_pct}%)"
+        )
+        parts.append(
+            f"  - Overhead & Profit: ${preview.totals.overhead_profit:,.2f} ({preview.totals.overhead_profit_pct}%)"
+        )
         parts.append(f"  - **Total Bid: ${preview.totals.total_bid_amount:,.2f}**")
         parts.append(f"  - Labor Hours: {preview.totals.total_labor_hours} hrs")
         parts.append("")
         parts.append("**Line Items:**")
         for item in preview.line_items:
-            parts.append(f"  - [{item.cost_code}] {item.description}: {item.quantity} {item.unit} @ ${item.unit_cost_material:.2f}/mat + ${item.unit_cost_labor:.2f}/lab = ${item.total_phase:,.2f}")
+            parts.append(
+                f"  - [{item.cost_code}] {item.description}: {item.quantity} {item.unit} @ ${item.unit_cost_material:.2f}/mat + ${item.unit_cost_labor:.2f}/lab = ${item.total_phase:,.2f}"
+            )
         parts.append("")
         if preview.exclusions:
             parts.append("**Exclusions:**")
@@ -86,7 +100,9 @@ def _build_rich_context(project_id: str, trade: str, bidder_id: str) -> str:
                 parts.append("**Version History:**")
                 for entry in index[-5:]:
                     ts = entry.get("timestamp", "")[:19]
-                    parts.append(f"  - {entry['version_id']} [{ts}] {entry.get('commit_message', '')}")
+                    parts.append(
+                        f"  - {entry['version_id']} [{ts}] {entry.get('commit_message', '')}"
+                    )
         except Exception:
             pass
 
@@ -94,11 +110,16 @@ def _build_rich_context(project_id: str, trade: str, bidder_id: str) -> str:
 
 
 async def agent_stream_generator(
-    messages: List[Dict[str, Any]], project_id: Optional[str], trade: str, bidder_id: str
+    messages: List[Dict[str, Any]],
+    project_id: Optional[str],
+    trade: str,
+    bidder_id: str,
 ):
     """Generator for streaming agent reasoning and tool calls via SSE."""
 
-    if project_id and not any("PROJECT CONTEXT" in m.get("content", "") for m in messages):
+    if project_id and not any(
+        "PROJECT CONTEXT" in m.get("content", "") for m in messages
+    ):
         context = _build_rich_context(project_id, trade, bidder_id=bidder_id)
         system_prompt = f"""You are an AI Estimator for VeloBid, a construction bid generation platform.
 
@@ -136,7 +157,10 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
                 "max_tokens": policy.max_tokens,
             }
             if policy.allow_tools:
-                request_kwargs["tools"] = TOOLS
+                # Merge native VeloBid tools with bidder's connected Composio integrations
+                composio_tools = get_tools_for_bidder(bidder_id)
+                merged_tools = TOOLS + composio_tools
+                request_kwargs["tools"] = merged_tools
                 request_kwargs["tool_choice"] = "auto"
 
             response = client.chat.completions.create(**request_kwargs)
@@ -160,29 +184,35 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
                 if delta.tool_calls:
                     for tc in delta.tool_calls:
                         if len(tool_calls) <= tc.index:
-                            tool_calls.append({
-                                "id": tc.id,
-                                "type": "function",
-                                "function": {"name": "", "arguments": ""},
-                            })
+                            tool_calls.append(
+                                {
+                                    "id": tc.id,
+                                    "type": "function",
+                                    "function": {"name": "", "arguments": ""},
+                                }
+                            )
                         if tc.id:
                             tool_calls[tc.index]["id"] = tc.id
                         if tc.function.name:
                             tool_calls[tc.index]["function"]["name"] += tc.function.name
                         if tc.function.arguments:
-                            tool_calls[tc.index]["function"]["arguments"] += tc.function.arguments
+                            tool_calls[tc.index]["function"]["arguments"] += (
+                                tc.function.arguments
+                            )
 
             if tool_calls:
                 formatted_tool_calls = []
                 for tc in tool_calls:
-                    formatted_tool_calls.append({
-                        "id": tc["id"],
-                        "type": "function",
-                        "function": {
-                            "name": tc["function"]["name"],
-                            "arguments": tc["function"]["arguments"],
-                        },
-                    })
+                    formatted_tool_calls.append(
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {
+                                "name": tc["function"]["name"],
+                                "arguments": tc["function"]["arguments"],
+                            },
+                        }
+                    )
 
                 # Do NOT include reasoning_content in the stored message
                 # as it will be re-sent to the API on the next iteration
@@ -201,16 +231,31 @@ You have tools to research blueprints, update configs, and generate PDFs. Use th
                     class ToolCallMock:
                         def __init__(self, id, name, args):
                             self.id = id
-                            self.function = type("obj", (object,), {"name": name, "arguments": args})
+                            self.function = type(
+                                "obj", (object,), {"name": name, "arguments": args}
+                            )
 
-                    mock_tc = ToolCallMock(tc["id"], tool_name, tc["function"]["arguments"])
+                    mock_tc = ToolCallMock(
+                        tc["id"], tool_name, tc["function"]["arguments"]
+                    )
                     result = handle_tool_call(mock_tc)
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc["id"],
-                        "name": tool_name,
-                        "content": result,
-                    })
+
+                    # If the native handler returned "Unknown tool", try Composio
+                    if result.startswith("Unknown tool:"):
+                        try:
+                            args = json.loads(tc["function"]["arguments"])
+                        except Exception:
+                            args = {}
+                        result = execute_tool_for_bidder(bidder_id, tool_name, args)
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc["id"],
+                            "name": tool_name,
+                            "content": result,
+                        }
+                    )
                     yield f"data: {json.dumps({'type': 'tool_result', 'name': tool_name, 'result': result})}\n\n"
 
                 continue
