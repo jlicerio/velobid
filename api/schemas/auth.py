@@ -74,6 +74,22 @@ class SignupStartResponse(BaseModel):
     email: str = Field(..., description="Masked admin email")
     message: str = Field("Verification email sent. Please check your inbox.")
     expires_in_minutes: int = 30
+    dev_access_token: str | None = Field(
+        None,
+        description="Access token (only returned in dev mode — DEV_MODE=true)",
+    )
+    dev_refresh_token: str | None = Field(
+        None,
+        description="Refresh token (only returned in dev mode — DEV_MODE=true)",
+    )
+    dev_user_id: str | None = Field(
+        None,
+        description="User ID (only returned in dev mode — DEV_MODE=true)",
+    )
+    dev_bidder_id: str | None = Field(
+        None,
+        description="Bidder ID — use this as bidder_id in /auth/bidders/login (dev mode only)",
+    )
 
 
 # ---------------------------------------------------------------------------

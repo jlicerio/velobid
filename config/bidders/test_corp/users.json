@@ -1,0 +1,10 @@
+[
+  {
+    "id": "bidder_test",
+    "name": "Bidder Test",
+    "role": "Estimator",
+    "email": "biddertest@example.com",
+    "password_salt": "e2b265f554d7d913a1d71f3ea1acc80b",
+    "password_hash": "2f0081bfb791750619acb868cd36802b9cb1c83c5373c9d1c03cc5dc52d15665"
+  }
+]

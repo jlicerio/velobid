@@ -6,6 +6,7 @@ for pending signups.  Will be backed by a database in a later iteration.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -25,6 +26,11 @@ from api.schemas.auth import (
     UserStatus,
 )
 from api.services.email import send_password_reset_email, send_verification_email
+from api.services.bidders import (
+    BIDDERS_DIR,
+    add_user_to_bidder,
+    write_json,
+)
 from api.services.security import (
     create_access_token,
     create_refresh_token,
@@ -146,7 +152,71 @@ async def start_signup(request: SignupStartRequest) -> SignupStartResponse:
     # 6. Send verification email
     send_verification_email(str(request.admin_email), token)
 
-    # 7. Return masked response
+    # 7. DEV_MODE: persist to disk and return tokens directly
+    if os.getenv("DEV_MODE", "").lower() in ("1", "true", "yes"):
+        # Derive human-readable IDs from form fields (must match _user_id_from_name)
+        import re
+
+        def _slug(text: str) -> str:
+            return re.sub(r"[^a-z0-9_]", "", text.lower().replace(" ", "_"))[:40]
+
+        bidder_id = _slug(request.company_name)
+        user_id = _slug(request.primary_contact)
+
+        # Create bidder profile on disk if it doesn't exist
+        bidder_dir = BIDDERS_DIR / bidder_id
+        bidder_file = bidder_dir / "bidder.json"
+        if not bidder_file.exists():
+            bidder_dir.mkdir(parents=True, exist_ok=True)
+            write_json(
+                bidder_file,
+                {
+                    "company_name": request.company_name,
+                    "bidder_display_name": (
+                        request.bidder_display_name or request.company_name
+                    ),
+                    "primary_contact": request.primary_contact,
+                    "contact_email": str(request.admin_email),
+                    "phone": request.phone,
+                    "location": request.location,
+                },
+            )
+
+        # Add user to bidder (writes to users.json with salted SHA256 —
+        # the same format /auth/bidders/login reads)
+        try:
+            add_user_to_bidder(
+                bidder_id=bidder_id,
+                name=request.primary_contact,
+                role="Estimator",
+                email=str(request.admin_email),
+                password=request.password,
+            )
+        except ValueError:
+            # User already exists on disk (e.g. container was restarted).
+            # Accept the re-registration silently in dev mode.
+            pass
+
+        # Mark in-memory state as active too (for the in-memory login path)
+        signup.status = UserStatus.active
+        signup.org_status = OrgStatus.active
+        signup.totp_secret = generate_totp_secret()
+        signup.recovery_codes = generate_recovery_codes(count=8)
+        signup.updated_at = datetime.now(tz=timezone.utc)
+
+        access_token = create_access_token(subject=signup.admin_user_id)
+        refresh_token = create_refresh_token(subject=signup.admin_user_id)
+
+        return SignupStartResponse(
+            signup_id=signup.signup_id,
+            email=mask_email(str(request.admin_email)),
+            dev_access_token=access_token,
+            dev_refresh_token=refresh_token,
+            dev_user_id=user_id,
+            dev_bidder_id=bidder_id,
+        )
+
+    # 8. Return masked response (normal mode)
     return SignupStartResponse(
         signup_id=signup.signup_id,
         email=mask_email(str(request.admin_email)),

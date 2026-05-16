@@ -1,0 +1,8 @@
+{
+  "company_name": "Test Corp",
+  "bidder_display_name": "Test",
+  "primary_contact": "Bidder Test",
+  "contact_email": "biddertest@example.com",
+  "phone": null,
+  "location": null
+}
