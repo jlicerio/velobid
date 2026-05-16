@@ -66,6 +66,13 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/projects/{project_id}", include_in_schema=False)
+@app.get("/projects/{project_id}/{trade}", include_in_schema=False)
+def project_workspace_redirect(project_id: str, trade: str = "hvac") -> RedirectResponse:
+    """Open project links directly in the bid workspace."""
+    return RedirectResponse(url=f"/workspace/{project_id}/{trade}", status_code=307)
+
+
 @app.get("/api/v1/meta")
 def meta() -> dict[str, str]:
     """Expose basic runtime paths for debugging local setup."""
