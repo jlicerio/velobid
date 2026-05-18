@@ -1,3 +1,7 @@
+> **ARCHIVED** — Historical release QA checklist from 2026-05-06. Superseded by the automated Playwright smoke tests and the production next-phase plan.
+> This document has been archived because its purpose has been fulfilled or superseded by newer documentation.
+> See  for the current development plan.
+> Original location: 
 # Release QA Checklist - Pre-Prod Signoff
 
 Use this checklist before promoting a build from pre-prod to production.

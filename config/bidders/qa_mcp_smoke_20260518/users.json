@@ -1,0 +1,10 @@
+[
+  {
+    "id": "qa_mcp_tester",
+    "name": "QA MCP Tester",
+    "role": "Estimator",
+    "email": "qa-mcp-20260518@example.com",
+    "password_salt": "39817271fd9612399e27ca2a217b1d41",
+    "password_hash": "d7050d3a090ee7319963bb5d0e2aa8ddae23d013caeb155f3c44ff2764201afa"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "qa_tester",
+    "name": "QA Tester",
+    "role": "Estimator",
+    "email": "qa-smoke-20260518@example.com",
+    "password_salt": "b0be07243c9eb3539b9fdc63352aa5b9",
+    "password_hash": "588a8e7a0160d3b6bd432a77b916c08c4c1b4171a73157a99ffe6d23a34ad167"
+  }
+]

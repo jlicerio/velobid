@@ -1,3 +1,7 @@
+> **ARCHIVED** — Historical execution report for the no-VM Linux host runbook from 2026-05-06. The runbook itself is still active; this report documents a specific execution session and can be referenced for historical context.
+> This document has been archived because its purpose has been fulfilled or superseded by newer documentation.
+> See  for the current development plan.
+> Original location: 
 # VeloBid No-VM Linux Host Runbook Execution Report
 
 Date: 2026-05-06 (local) / 2026-05-07 UTC

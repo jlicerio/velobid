@@ -1,3 +1,7 @@
+> **ARCHIVED** — Historical run report for Kaban + OpenCode automation from 2026-05-08. Superseded by current deployment; key takeaway (Linux host Docker redeploy on selfsim@192.168.1.237) is documented in the active runbook.
+> This document has been archived because its purpose has been fulfilled or superseded by newer documentation.
+> See  for the current development plan.
+> Original location: 
 # Kaban + OpenCode Run Report (2026-05-08)
 
 ## Summary

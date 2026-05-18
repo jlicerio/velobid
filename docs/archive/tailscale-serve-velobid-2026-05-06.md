@@ -1,3 +1,7 @@
+> **ARCHIVED** — Historical Tailscale Serve configuration report from 2026-05-06. Tailscale Funnel/Serve config was completed and is operational; no further configuration changes expected.
+> This document has been archived because its purpose has been fulfilled or superseded by newer documentation.
+> See  for the current development plan.
+> Original location: 
 # Tailscale Serve Configuration Report — VeloBid
 Date: 2026-05-06
 

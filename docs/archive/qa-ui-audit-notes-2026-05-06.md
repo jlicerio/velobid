@@ -1,3 +1,7 @@
+> **ARCHIVED** — Historical QA UI audit notes from 2026-05-06. The issues identified in this pass were addressed and fixed (issues #2, #3, #5). Superseded by the production next-phase plan.
+> This document has been archived because its purpose has been fulfilled or superseded by newer documentation.
+> See  for the current development plan.
+> Original location: 
 # UI/UX QA Notes - 2026-05-06
 
 ## Scope covered

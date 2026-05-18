@@ -1,3 +1,7 @@
+> **ARCHIVED** — Historical Tailscale container overlay deployment report from 2026-05-07. Was marked BLOCKED; the current deployment uses host-level Tailscale instead of the container overlay pattern.
+> This document has been archived because its purpose has been fulfilled or superseded by newer documentation.
+> See  for the current development plan.
+> Original location: 
 # Tailscale Container Overlay Deployment Report
 
 Date: 2026-05-07
