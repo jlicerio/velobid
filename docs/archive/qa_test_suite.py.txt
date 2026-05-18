@@ -1,3 +1,9 @@
+> **ARCHIVED** — Old comprehensive QA test suite. References C:\Users\xlice\Desktop\velobid (Windows-specific path). Superseded by pytest tests/ and the Playwright smoke tests in PR #8.
+> This file has been archived because it is superseded by newer tooling.
+> See `docs/production-next-phase-plan.md` for the current development plan.
+> See `tests/` for backend pytest tests and `frontend/tests/` for Playwright smoke tests.
+> Original location: `qa_test_suite.py`
+
 """Comprehensive VeloBid API QA Test Suite.
 Tests all endpoints by calling the application layer directly.
 """
@@ -184,18 +190,15 @@ def test_version_create_and_list():
     req = GenerateBidRequest(project_id="shalom_prayer_center", trade="hvac")
     preview = preview_bid(req)
 
-    # Create a version (idempotent - use a unique trigger for test)
     v1 = create_snapshot("shalom_prayer_center", "hvac", "ai_refine", preview, commit_message="QA test snapshot")
     assert v1.version_id.startswith("v")
     assert v1.commit_message == "QA test snapshot"
-    assert v1.diff is None or v1.diff.summary is not None  # may or may not have diff
+    assert v1.diff is None or v1.diff.summary is not None
 
-    # List
     versions = list_versions("shalom_prayer_center", "hvac")
     assert len(versions) >= 1
     assert versions[-1].version_id == v1.version_id
 
-    # Read back
     snap = get_snapshot("shalom_prayer_center", "hvac", v1.version_id)
     assert snap.snapshot_data.project_name == "Shalom Prayer Center"
     assert snap.snapshot_data.totals["total_bid_amount"] == 89536.12
@@ -204,7 +207,6 @@ test("Version create, list, and read", test_version_create_and_list)
 
 def test_version_diff():
     from api.services.versions import get_diff, list_versions
-
     versions = list_versions("shalom_prayer_center", "hvac")
     if len(versions) >= 2:
         v2 = versions[-1].version_id
@@ -216,7 +218,6 @@ test("Version diff endpoint", test_version_diff)
 
 def test_version_restore():
     from api.services.versions import restore_snapshot, list_versions
-
     versions = list_versions("shalom_prayer_center", "hvac")
     assert len(versions) >= 1
     v1 = versions[-1].version_id
@@ -240,7 +241,6 @@ test("AI module imports with timeout handling", test_ai_imports)
 
 def test_ai_router_error_handling():
     from api.routers.ai import router
-    # Check the route exists
     routes = [(r.path, list(r.methods)) for r in router.routes]
     assert any("/refine" in r[0] for r in routes)
 
@@ -257,58 +257,3 @@ def test_chat_imports():
     assert msg.role == "user"
 
 test("Agent chat router imports", test_chat_imports)
-
-def test_chat_context_building():
-    from api.routers.agent_chat import _build_rich_context
-    context = _build_rich_context("shalom_prayer_center", "hvac")
-    assert "Shalom Prayer Center" in context
-    assert "$89,536.12" in context
-    assert "Total Bid" in context
-    assert "Line Items" in context
-    assert "23-31-00" in context  # cost code
-
-test("Chat context injection includes live bid state", test_chat_context_building)
-
-def test_chat_context_without_project():
-    from api.routers.agent_chat import _build_rich_context
-    try:
-        context = _build_rich_context("__nonexistent__", "hvac")
-        assert "Project ID" in context
-    except Exception:
-        pass  # Acceptable either way
-
-test("Chat context handles missing project gracefully", test_chat_context_without_project)
-
-# ===== 8. FILE MANAGEMENT =====
-print("\n--- 8. File Management ---")
-
-def test_list_files():
-    from api.routers.files import router
-    routes = [r.path for r in router.routes]
-    assert "/api/v1/files/list" in routes
-    assert "/api/v1/files/delete" in routes
-
-test("File routes registered", test_list_files)
-
-def test_generated_file_urls():
-    from api.services.bids import generate_bid_files
-    from api.schemas.bids import GenerateBidRequest
-    req = GenerateBidRequest(project_id="shalom_prayer_center", trade="electrical", package_name="client")
-    result = generate_bid_files(req)
-    for f in result.generated_files:
-        assert f.url.startswith("/files/")
-        assert f.filename.endswith(".pdf")
-
-test("Generated file URLs are valid", test_generated_file_urls)
-
-# ===== SUMMARY =====
-print("\n" + "=" * 60)
-print(f"RESULTS: {len(passed)} passed, {len(failed)} failed, {len(passed)+len(failed)} total")
-if failed:
-    print("FAILED TESTS:")
-    for f in failed:
-        print(f"  - {f}")
-    sys.exit(1)
-else:
-    print("ALL TESTS PASSED")
-    sys.exit(0)

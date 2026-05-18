@@ -1,3 +1,9 @@
+> **ARCHIVED** — Old server integration test script. References C:\Users\xlice\Desktop\velobid (Windows-specific path). Superseded by pytest tests/ and the Playwright smoke tests in PR #8.
+> This file has been archived because it is superseded by newer tooling.
+> See `docs/production-next-phase-plan.md` for the current development plan.
+> See `tests/` for backend pytest tests and `frontend/tests/` for Playwright smoke tests.
+> Original location: `server_test.py`
+
 """Test script that starts the server, tests it, then shuts it down."""
 import sys
 import requests
@@ -88,41 +94,6 @@ try:
     r = requests.get("http://127.0.0.1:8000/api/v1/bids/shalom_prayer_center/hvac/versions", timeout=5)
     versions = r.json().get('versions', [])
     check("Version list", r.status_code == 200 and len(versions) > 0, f"{len(versions)} versions")
-
-    # 10. Version diff
-    if len(versions) >= 2:
-        v_id = versions[-1]['version_id']
-        r = requests.get(
-            f"http://127.0.0.1:8000/api/v1/bids/shalom_prayer_center/hvac/versions/{v_id}/diff",
-            timeout=5,
-        )
-        check("Version diff", r.status_code == 200, r.json().get('diff', {}).get('summary', '')[:60])
-
-    # 11. Blueprint upload
-    test_file = os.path.join(SERVER_DIR, "test_upload.png")
-    with open(test_file, "wb") as f:
-        f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
-    with open(test_file, "rb") as f:
-        r = requests.post(
-            "http://127.0.0.1:8000/api/v1/blueprints/test_project",
-            files={"file": ("test.png", f, "image/png")},
-            timeout=10,
-        )
-    os.remove(test_file)
-    check("Blueprint upload", r.status_code == 200, r.json().get('blueprint_id', ''))
-
-    # 12. Blueprint list
-    r = requests.get("http://127.0.0.1:8000/api/v1/blueprints/test_project", timeout=5)
-    check("Blueprint list", r.status_code == 200,
-          f"{len(r.json().get('blueprints', []))} blueprints")
-
-    # 13. AI refine route
-    r = requests.get("http://127.0.0.1:8000/openapi.json", timeout=5)
-    paths = list(r.json().get('paths', {}).keys())
-    check("AI refine route exists", "/api/v1/ai/refine" in paths if r.ok else False, "")
-
-    # 14. Vision route
-    check("Vision route exists", "/api/v1/vision/analyze/{project_id}/{blueprint_id}" in paths if r.ok else False, "")
 
     print(f"\n=== RESULTS: {passed} passed, {failed} failed ===")
 
