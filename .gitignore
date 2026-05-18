@@ -56,3 +56,7 @@ qa-reports/
 .kaban/
 bid_projects/residential/qa_regression_user_*/
 config/projects/qa_regression_user_*.json
+
+# Playwright
+test-results/
+playwright-report/
