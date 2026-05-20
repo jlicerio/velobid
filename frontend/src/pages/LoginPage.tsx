@@ -8,6 +8,7 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const errorId = error ? "login-error" : undefined;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -39,30 +40,42 @@ export function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">User ID</label>
+            <label htmlFor="login-user-id" className="block text-sm font-medium mb-1">User ID</label>
             <input
+              id="login-user-id"
+              name="user_id"
               type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               autoComplete="username"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={errorId}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="Enter your user ID"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-medium mb-1">Password</label>
             <input
+              id="login-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={errorId}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="Enter your password"
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p id="login-error" role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"

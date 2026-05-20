@@ -21,6 +21,21 @@ const signupSchema = z.object({
 })
 
 type SignupFormValues = z.infer<typeof signupSchema>
+type SignupFieldName = keyof SignupFormValues
+
+const fieldIds: Record<SignupFieldName, string> = {
+  company_name: "company-name",
+  primary_contact: "primary-contact",
+  admin_email: "admin-email",
+  password: "signup-password",
+  phone: "phone",
+  location: "location",
+  accept_terms: "accept_terms",
+}
+
+function errorIdFor(field: SignupFieldName) {
+  return `${fieldIds[field]}-error`
+}
 
 interface ConfirmationState {
   email: string
@@ -47,6 +62,14 @@ export function SignupPage() {
       accept_terms: false,
     },
   })
+
+  function fieldA11y(field: SignupFieldName) {
+    const hasError = Boolean(errors[field])
+    return {
+      "aria-invalid": hasError || undefined,
+      "aria-describedby": hasError ? errorIdFor(field) : undefined,
+    }
+  }
 
   async function onSubmit(data: SignupFormValues) {
     try {
@@ -122,89 +145,107 @@ export function SignupPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Company Name */}
           <div>
-            <label className="block text-sm font-medium mb-1">Company name</label>
+            <label htmlFor={fieldIds.company_name} className="block text-sm font-medium mb-1">Company name</label>
             <input
+              id={fieldIds.company_name}
               type="text"
+              autoComplete="organization"
+              {...fieldA11y("company_name")}
               {...register("company_name")}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="Enter your company name"
             />
             {errors.company_name && (
-              <p className="text-xs text-destructive mt-1">{errors.company_name.message}</p>
+              <p id={errorIdFor("company_name")} className="text-xs text-destructive mt-1">{errors.company_name.message}</p>
             )}
           </div>
 
           {/* Primary Contact */}
           <div>
-            <label className="block text-sm font-medium mb-1">Primary contact</label>
+            <label htmlFor={fieldIds.primary_contact} className="block text-sm font-medium mb-1">Primary contact</label>
             <input
+              id={fieldIds.primary_contact}
               type="text"
+              autoComplete="name"
+              {...fieldA11y("primary_contact")}
               {...register("primary_contact")}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="Full name of primary contact"
             />
             {errors.primary_contact && (
-              <p className="text-xs text-destructive mt-1">{errors.primary_contact.message}</p>
+              <p id={errorIdFor("primary_contact")} className="text-xs text-destructive mt-1">{errors.primary_contact.message}</p>
             )}
           </div>
 
           {/* Admin Email */}
           <div>
-            <label className="block text-sm font-medium mb-1">Admin email</label>
+            <label htmlFor={fieldIds.admin_email} className="block text-sm font-medium mb-1">Admin email</label>
             <input
+              id={fieldIds.admin_email}
               type="email"
+              autoComplete="email"
+              {...fieldA11y("admin_email")}
               {...register("admin_email")}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="admin@company.com"
             />
             {errors.admin_email && (
-              <p className="text-xs text-destructive mt-1">{errors.admin_email.message}</p>
+              <p id={errorIdFor("admin_email")} className="text-xs text-destructive mt-1">{errors.admin_email.message}</p>
             )}
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label htmlFor={fieldIds.password} className="block text-sm font-medium mb-1">Password</label>
             <input
+              id={fieldIds.password}
               type="password"
+              autoComplete="new-password"
+              {...fieldA11y("password")}
               {...register("password")}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="Minimum 8 characters"
             />
             {errors.password && (
-              <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
+              <p id={errorIdFor("password")} className="text-xs text-destructive mt-1">{errors.password.message}</p>
             )}
           </div>
 
           {/* Phone (optional) */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor={fieldIds.phone} className="block text-sm font-medium mb-1">
               Phone <span className="text-muted-foreground">(optional)</span>
             </label>
             <input
+              id={fieldIds.phone}
               type="tel"
+              autoComplete="tel"
+              {...fieldA11y("phone")}
               {...register("phone")}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="+1 (555) 123-4567"
             />
             {errors.phone && (
-              <p className="text-xs text-destructive mt-1">{errors.phone.message}</p>
+              <p id={errorIdFor("phone")} className="text-xs text-destructive mt-1">{errors.phone.message}</p>
             )}
           </div>
 
           {/* Location (optional) */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label htmlFor={fieldIds.location} className="block text-sm font-medium mb-1">
               Location <span className="text-muted-foreground">(optional)</span>
             </label>
             <input
+              id={fieldIds.location}
               type="text"
+              autoComplete="address-level2"
+              {...fieldA11y("location")}
               {...register("location")}
               className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
               placeholder="City, State"
             />
             {errors.location && (
-              <p className="text-xs text-destructive mt-1">{errors.location.message}</p>
+              <p id={errorIdFor("location")} className="text-xs text-destructive mt-1">{errors.location.message}</p>
             )}
           </div>
 
@@ -212,19 +253,20 @@ export function SignupPage() {
           <div className="flex items-start gap-2">
             <input
               type="checkbox"
-              id="accept_terms"
+              id={fieldIds.accept_terms}
+              {...fieldA11y("accept_terms")}
               {...register("accept_terms")}
               className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
-            <label htmlFor="accept_terms" className="text-sm text-muted-foreground">
+            <label htmlFor={fieldIds.accept_terms} className="text-sm text-muted-foreground">
               I accept the{" "}
-              <a href="#" className="text-primary underline-offset-4 hover:underline">
+              <Link to="/terms" className="text-primary underline-offset-4 hover:underline">
                 terms and conditions
-              </a>
+              </Link>
             </label>
           </div>
           {errors.accept_terms && (
-            <p className="text-xs text-destructive">{errors.accept_terms.message}</p>
+            <p id={errorIdFor("accept_terms")} className="text-xs text-destructive">{errors.accept_terms.message}</p>
           )}
 
           {/* Submit */}
