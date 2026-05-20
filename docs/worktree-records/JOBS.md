@@ -136,3 +136,104 @@ Do not include:
 - Auth persistence work.
 - Security hardening beyond this route/prefetch issue.
 - PR #7 decomposition.
+
+## Execution Status — 2026-05-20
+
+Latest pushed implementation commit before this documentation update:
+
+```text
+7a54c05 fix: public legal routes, unauthenticated prefetch, autocomplete, and Playwright coverage
+```
+
+### Completed fixes
+
+- Restored public legal route source in this worktree:
+  - added `frontend/src/pages/TermsPage.tsx`
+  - added `frontend/src/pages/PrivacyPage.tsx`
+  - added public `/terms` and `/privacy` routes in `frontend/src/app/router.tsx`
+- Added route-level auth gating:
+  - added `frontend/src/components/shared/ProtectedRoute.tsx`
+  - wrapped authenticated app routes under `ProtectedRoute`
+  - removed the redundant auth redirect effect from `AppShell`
+- Fixed login autocomplete:
+  - `autoComplete="username"`
+  - `autoComplete="current-password"`
+- Added Playwright smoke coverage and package metadata:
+  - `frontend/playwright.config.ts`
+  - `frontend/tests/smoke/public-routes.spec.ts`
+  - `frontend/tests/smoke/unauthenticated-console.spec.ts`
+  - `frontend/tests/smoke/mobile-auth.spec.ts`
+  - `frontend/package.json`
+  - `frontend/package-lock.json`
+
+### Root causes confirmed
+
+- `/terms` and `/privacy` were source gaps in this branch: the route entries and page components were missing.
+- Continued `/terms` or `/privacy` app-level 404s after this fix mean the deployed Docker/frontend bundle is stale.
+- `401 GET /api/v1/projects/with-pricing` on unauthenticated entry came from protected route components mounting before redirect completed. `ProtectedRoute` prevents `AppShell` and `ProjectsPage` from mounting without a token.
+
+### Validation results
+
+Linux build on `selfsim-system`:
+
+```bash
+cd /home/selfsim/projects/velobid-public-route-qa/frontend
+npm install
+npm run build
+```
+
+Result: passed.
+
+```text
+vite v8.0.10 building client environment for production...
+✓ built in 900ms
+```
+
+Lint:
+
+```bash
+npm run lint
+```
+
+Result: failed on existing repo-wide lint debt unrelated to this branch. No changed-file lint blocker was identified.
+
+Playwright smoke against current live deployment at `http://192.168.1.237:8000`:
+
+Result: 7 passed, 2 failed.
+
+Passed:
+- mobile `/login`
+- mobile `/signup`
+- `/login` renders
+- `/signup` renders
+- `/projects` redirects unauthenticated to `/login`
+- `/login` has no `projects/with-pricing` console error
+- `/signup` has no `projects/with-pricing` console error
+
+Failed before redeploy:
+- `/terms` still renders `Page not found`
+- `/privacy` still renders `Page not found`
+
+Interpretation: live Docker is still serving the old frontend bundle. Rebuild/redeploy from this branch and rerun smoke tests; expected result is all 9 passing.
+
+### Deployment retest
+
+After Docker rebuild/redeploy from this branch:
+
+```bash
+cd /home/selfsim/projects/velobid-public-route-qa/frontend
+VELOBID_URL=http://192.168.1.237:8000 npm run test:smoke
+```
+
+If Playwright browser support on Linux is unavailable, run locally with the direct CLI path from Windows/Zed:
+
+```bash
+node //192.168.1.237/Ubuntu-Dev/projects/velobid-public-route-qa/frontend/node_modules/@playwright/test/cli.js test --config=//192.168.1.237/Ubuntu-Dev/projects/velobid-public-route-qa/frontend/playwright.config.ts --project=chromium
+```
+
+### Environment notes for future agents
+
+- Do not commit `frontend/test-results/`.
+- Windows/Zed uses the UNC worktree path; Linux may need the `.git` pointer temporarily switched to `/home/selfsim/projects/velobid/.git/worktrees/velobid-public-route-qa` for Linux-side git commands.
+- Restore the UNC pointer afterward so Windows/Zed tools can use the worktree.
+- Do not broaden this branch into unrelated lint cleanup, billing, auth persistence, Docker multi-stage work, or PR #7 decomposition.
