@@ -1,8 +1,11 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppProviders } from './AppProviders'
 import { AppShell } from '@/components/shared/AppShell'
+import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
+import { TermsPage } from '@/pages/TermsPage'
+import { PrivacyPage } from '@/pages/PrivacyPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
 import { ProjectDetailPage } from '@/pages/ProjectDetailPage'
 import { DocumentViewerPage } from '@/pages/DocumentViewerPage'
@@ -17,27 +20,34 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/signup', element: <SignupPage /> },
+      { path: '/terms', element: <TermsPage /> },
+      { path: '/privacy', element: <PrivacyPage /> },
       {
-        path: '/',
-        element: <AppShell />,
+        element: <ProtectedRoute />,
         children: [
-          { index: true, element: <ProjectsPage /> },
-          { path: 'projects', element: <ProjectsPage /> },
-          { path: 'projects/:projectId', element: <ProjectDetailPage /> },
           {
-            path: 'projects/:projectId/documents',
-            element: <DocumentViewerPage />,
+            path: '/',
+            element: <AppShell />,
+            children: [
+              { index: true, element: <ProjectsPage /> },
+              { path: 'projects', element: <ProjectsPage /> },
+              { path: 'projects/:projectId', element: <ProjectDetailPage /> },
+              {
+                path: 'projects/:projectId/documents',
+                element: <DocumentViewerPage />,
+              },
+              {
+                path: 'projects/:projectId/blueprints/analyze',
+                element: <BlueprintVisionPage />,
+              },
+              { path: 'residential', element: <ResidentialEstimatesPage /> },
+              { path: 'settings', element: <SettingsPage /> },
+              { path: 'settings/profile', element: <SettingsPage /> },
+              { path: 'settings/bidders', element: <SettingsPage /> },
+              { path: 'settings/users', element: <SettingsPage /> },
+              { path: 'settings/trades', element: <SettingsPage /> },
+            ],
           },
-          {
-            path: 'projects/:projectId/blueprints/analyze',
-            element: <BlueprintVisionPage />,
-          },
-          { path: 'residential', element: <ResidentialEstimatesPage /> },
-          { path: 'settings', element: <SettingsPage /> },
-          { path: 'settings/profile', element: <SettingsPage /> },
-          { path: 'settings/bidders', element: <SettingsPage /> },
-          { path: 'settings/users', element: <SettingsPage /> },
-          { path: 'settings/trades', element: <SettingsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },
