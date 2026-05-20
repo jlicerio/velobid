@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { useChat } from "@/lib/chat-store";
@@ -17,16 +17,9 @@ export function AppShell() {
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const navigate = useNavigate();
   const { state, dispatch, createSession } = useChat();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    if (!localStorage.getItem("token")) {
-      navigate("/login", { replace: true });
-    }
-  }, [navigate]);
 
   // Detect mobile and auto-toggle sidebar
   useEffect(() => {
